@@ -1,0 +1,34 @@
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Maven build
+target/
+**/target/
+
+# Allure reports
+allure-results/
+allure-report/
+**/allure-results/
+**/allure-report/
+
+# Logs
+*.log
+logs/
+
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+*.local.properties
+application-local.properties
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.bak

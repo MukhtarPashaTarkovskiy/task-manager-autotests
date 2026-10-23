@@ -32,3 +32,11 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.bak
+
+# IntelliJ IDEA
+.idea/
+*.iml
+
+# Maven build
+target/
+**/target/

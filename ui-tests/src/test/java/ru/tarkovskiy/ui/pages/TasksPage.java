@@ -21,9 +21,9 @@ public class TasksPage extends BasePage {
 
     @Step("Открыть страницу")
     public TasksPage open(String baseUrl) {
-        driver.get(baseUrl + TASKS_URL);
+        navigate(baseUrl + TASKS_URL);
 
-        wait.until(
+        await(
                 ExpectedConditions.urlToBe(baseUrl + TASKS_URL)
         );
 
@@ -49,7 +49,7 @@ public class TasksPage extends BasePage {
     @Step("Дождаться загрузки списка задач")
     public TasksPage waitForTasksLoaded() {
 
-        wait.until(driver -> {
+        await(driver -> {
             var rows = driver.findElements(
                     By.cssSelector("#tasks-table-body tr")
             );
@@ -79,7 +79,7 @@ public class TasksPage extends BasePage {
                         + taskId + "']]"
         );
 
-        WebElement row = wait.until(
+        WebElement row = await(
                 ExpectedConditions.visibilityOfElementLocated(taskRow)
         );
 
@@ -87,13 +87,13 @@ public class TasksPage extends BasePage {
                 By.xpath(".//button[normalize-space()='Удалить']")
         ).click();
 
-        wait.until(ExpectedConditions.visibilityOfElementLocated(
+        await(ExpectedConditions.visibilityOfElementLocated(
                 By.id("delete-task-modal")
         ));
 
         click(By.id("confirm-delete-task"));
 
-        wait.until(ExpectedConditions.invisibilityOfElementLocated(taskRow));
+        await(ExpectedConditions.invisibilityOfElementLocated(taskRow));
 
         return this;
     }
@@ -106,7 +106,7 @@ public class TasksPage extends BasePage {
                         + taskId + "']]"
         );
 
-        WebElement row = wait.until(
+        WebElement row = await(
                 ExpectedConditions.visibilityOfElementLocated(taskRow)
         );
 
@@ -114,13 +114,13 @@ public class TasksPage extends BasePage {
                 By.xpath(".//button[normalize-space()='Удалить']")
         ).click();
 
-        wait.until(ExpectedConditions.visibilityOfElementLocated(
+        await(ExpectedConditions.visibilityOfElementLocated(
                 By.id("delete-task-modal")
         ));
 
         click(By.id("cancel-delete-task"));
 
-        wait.until(ExpectedConditions.invisibilityOfElementLocated(
+        await(ExpectedConditions.invisibilityOfElementLocated(
                 By.id("delete-task-modal")
         ));
 

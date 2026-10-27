@@ -21,11 +21,11 @@ public class TaskEditPage extends BasePage {
 
     @Step("Открыть страницу")
     public TaskEditPage open(String baseUrl, long taskId) {
-        driver.get(baseUrl + "/tasks/" + taskId + "/edit");
+        navigate(baseUrl + "/tasks/" + taskId + "/edit");
 
         // Ждём окончания асинхронной загрузки задачи.
         // В нашем тесте название созданной задачи не пустое.
-        wait.until(d -> {
+        await(d -> {
             String title = d.findElement(titleInput)
                     .getDomProperty("value");
 
@@ -69,7 +69,7 @@ public class TaskEditPage extends BasePage {
 
     @Step("Дождаться сохранения задачи")
     public TaskEditPage waitForSuccessfulUpdate(String baseUrl) {
-        wait.until(ExpectedConditions.urlToBe(
+        await(ExpectedConditions.urlToBe(
                 baseUrl + "/tasks"
         ));
         return this;

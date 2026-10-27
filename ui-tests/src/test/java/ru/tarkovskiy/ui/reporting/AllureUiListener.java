@@ -50,6 +50,11 @@ public final class AllureUiListener implements TestLifecycleListener, ContainerL
         // This callback runs before the subclass data-cleanup @AfterMethod.
         if (method.isTestMethod() && result.getThrowable() != null
                 && result.getInstance() instanceof BaseUiTest test) {
+            // Also cover direct WebDriverWait calls in tests; avoid a second snapshot.
+            if (result.getThrowable() instanceof org.openqa.selenium.WebDriverException failure
+                    && !Boolean.TRUE.equals(result.getAttribute(UiFailureDiagnostics.ATTACHED))) {
+                test.attachFailureDiagnostics(failure);
+            }
             test.attachFailureScreenshot();
         } else if (method.isTestMethod() && result.getStatus() == ITestResult.SUCCESS
                 && result.getInstance() instanceof BaseUiTest test

@@ -28,7 +28,7 @@ public class RegistrationPage extends BasePage {
 
     @Step("Открыть страницу")
     public RegistrationPage open(String baseUrl) {
-        driver.get(baseUrl + REGISTER_URL);
+        navigate(baseUrl + REGISTER_URL);
         return this;
     }
 
@@ -90,7 +90,7 @@ public class RegistrationPage extends BasePage {
     public LoginPage clickLoginLink() {
         click(loginLink);
 
-        wait.until(
+        await(
                 ExpectedConditions.urlToBe(
                         UiConfig.BASE_URL + "/login"
                 )

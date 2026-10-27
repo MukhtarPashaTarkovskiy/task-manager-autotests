@@ -26,7 +26,7 @@ public class TaskFormPage extends BasePage {
 
     @Step("Открыть страницу")
     public TaskFormPage open(String baseUrl) {
-        driver.get(baseUrl + "/tasks/new");
+        navigate(baseUrl + "/tasks/new");
         return this;
     }
 
@@ -50,7 +50,7 @@ public class TaskFormPage extends BasePage {
 
     @Step("Дождаться создания задачи")
     public TaskFormPage waitForSuccessfulCreation(String baseUrl) {
-        wait.until(
+        await(
                 ExpectedConditions.urlToBe(baseUrl + "/tasks")
         );
         return this;
@@ -110,7 +110,7 @@ public class TaskFormPage extends BasePage {
     }
 
     public String getTitleErrorText() {
-        return wait.until(
+        return await(
                 ExpectedConditions.visibilityOfElementLocated(titleError)
         ).getText();
     }

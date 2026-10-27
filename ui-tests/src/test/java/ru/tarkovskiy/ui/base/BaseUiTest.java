@@ -27,6 +27,10 @@ public class BaseUiTest {
         attachScreenshot("Состояние браузера при падении");
     }
 
+    public void attachFailureDiagnostics(org.openqa.selenium.WebDriverException failure) {
+        ru.tarkovskiy.ui.reporting.UiFailureDiagnostics.attach(driver, null, failure);
+    }
+
     public void attachScreenshot(String name) {
         if (!(driver instanceof TakesScreenshot screenshot)) {
             return;

@@ -27,7 +27,7 @@ public class LoginPage extends BasePage {
 
     @Step("Открыть страницу")
     public LoginPage open(String baseUrl) {
-        driver.get(baseUrl + LOGIN_URL);
+        navigate(baseUrl + LOGIN_URL);
         return this;
     }
 
@@ -49,7 +49,7 @@ public class LoginPage extends BasePage {
 
     @Step("Дождаться успешного входа")
     public LoginPage waitForSuccessfulLogin(String baseUrl) {
-        wait.until(
+        await(
                 ExpectedConditions.urlToBe(baseUrl + "/tasks")
         );
         return this;
@@ -83,7 +83,7 @@ public class LoginPage extends BasePage {
 
     @Step("Дождаться отклонения входа")
     public LoginPage waitForLoginError(String baseUrl) {
-        wait.until(
+        await(
                 ExpectedConditions.urlToBe(baseUrl + "/login?error")
         );
         return this;
@@ -117,7 +117,7 @@ public class LoginPage extends BasePage {
     public RegistrationPage clickRegistrationLink() {
         click(registrationLink);
 
-        wait.until(
+        await(
                 ExpectedConditions.urlToBe(
                         UiConfig.BASE_URL + "/register"
                 )

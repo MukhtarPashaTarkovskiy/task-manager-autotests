@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
+
+<suite name="Task Manager UI Regression Suite" verbose="1">
+
+    <test name="UI Regression Tests">
+        <packages>
+            <package name="ru.tarkovskiy.ui.tests"/>
+        </packages>
+    </test>
+
+</suite>

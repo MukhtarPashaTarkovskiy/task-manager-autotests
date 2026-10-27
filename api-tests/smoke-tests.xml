@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
+
+<suite name="Task Manager API Smoke Suite" verbose="1">
+
+    <test name="API Smoke Tests">
+        <classes>
+
+            <class name="ru.tarkovskiy.api.tests.DbConnectionTest">
+                <methods>
+                    <include name="shouldConnectToTestDatabase"/>
+                </methods>
+            </class>
+
+            <class name="ru.tarkovskiy.api.tests.LoginTest">
+                <methods>
+                    <include name="shouldLoginWithValidCredentials"/>
+                </methods>
+            </class>
+
+            <class name="ru.tarkovskiy.api.tests.RegistrationTest">
+                <methods>
+                    <include name="shouldRegisterUserSuccessfully"/>
+                </methods>
+            </class>
+
+            <class name="ru.tarkovskiy.api.tests.TaskApiTest">
+                <methods>
+                    <include name="shouldCreateTaskSuccessfully"/>
+                    <include name="shouldUpdateTaskSuccessfully"/>
+                    <include name="shouldDeleteTaskSuccessfully"/>
+                </methods>
+            </class>
+
+        </classes>
+    </test>
+
+</suite>

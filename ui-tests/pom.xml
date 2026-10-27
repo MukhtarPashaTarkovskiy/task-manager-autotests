@@ -33,6 +33,14 @@
             <artifactId>allure-testng</artifactId>
             <scope>test</scope>
         </dependency>
+
+        <!-- PostgreSQL JDBC для проверки и очистки тестовых данных -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>42.7.7</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
 </project>

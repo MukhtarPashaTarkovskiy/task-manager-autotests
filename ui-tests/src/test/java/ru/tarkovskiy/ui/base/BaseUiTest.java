@@ -16,7 +16,6 @@ import java.time.Duration;
 public class BaseUiTest {
 
     protected WebDriver driver;
-    protected WebDriverWait wait;
     protected LoginPage loginPage;
     protected static final String BASE_URL = UiConfig.BASE_URL;
 
@@ -33,10 +32,6 @@ public class BaseUiTest {
 
         driver = new ChromeDriver(options);
         loginPage = new LoginPage(driver);
-        wait = new WebDriverWait(
-                driver,
-                Duration.ofSeconds(15)
-        );
     }
 
     @AfterMethod(alwaysRun = true)

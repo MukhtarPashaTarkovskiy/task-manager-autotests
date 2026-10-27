@@ -2,27 +2,23 @@ package ru.tarkovskiy.ui.pages;
 
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import ru.tarkovskiy.ui.base.BasePage;
+import ru.tarkovskiy.ui.config.UiConfig;
 import ru.tarkovskiy.ui.enums.LoginElement;
-
+import org.openqa.selenium.JavascriptExecutor;
 import static ru.tarkovskiy.ui.enums.LoginElement.*;
 
 public class LoginPage extends BasePage {
 
     private static final String LOGIN_URL = "/login";
     private final By usernameInput = By.id("username");
-
     private final By passwordInput = By.id("password");
-
-    private final By loginButton =
-            By.cssSelector("form.auth-form button[type='submit']");
-
-    private final By registrationLink =
-            By.cssSelector("a[href='/register']");
-
-    private final By pageTitle =
-            By.tagName("h1");
+    private final By loginButton = By.cssSelector("form.auth-form button[type='submit']");
+    private final By registrationLink = By.cssSelector("a[href='/register']");
+    private final By pageTitle = By.tagName("h1");
+    private final By loginErrorMessage = By.cssSelector("[role='alert'].alert-error");
 
     public LoginPage(WebDriver driver) {
         super(driver);
@@ -76,5 +72,48 @@ public class LoginPage extends BasePage {
         enterPassword(password);
         submit();
         return this;
+    }
+
+    public LoginPage waitForLoginError(String baseUrl) {
+        wait.until(
+                ExpectedConditions.urlToBe(baseUrl + "/login?error")
+        );
+        return this;
+    }
+
+    public String getLoginErrorMessage() {
+        return findVisible(loginErrorMessage).getText();
+    }
+
+    public boolean isValueMissing(LoginElement element) {
+
+        By locator = switch (element) {
+            case USERNAME -> usernameInput;
+            case PASSWORD -> passwordInput;
+            default -> throw new IllegalArgumentException(
+                    "Проверка обязательности не поддерживается: " + element
+            );
+        };
+
+        WebElement input = findVisible(locator);
+
+        JavascriptExecutor js = (JavascriptExecutor) driver;
+
+        return (Boolean) js.executeScript(
+                "return arguments[0].validity.valueMissing;",
+                input
+        );
+    }
+
+    public RegistrationPage clickRegistrationLink() {
+        click(registrationLink);
+
+        wait.until(
+                ExpectedConditions.urlToBe(
+                        UiConfig.BASE_URL + "/register"
+                )
+        );
+
+        return new RegistrationPage(driver);
     }
 }

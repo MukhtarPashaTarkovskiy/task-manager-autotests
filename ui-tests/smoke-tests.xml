@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
+
+<suite name="Task Manager UI Smoke Suite" verbose="1">
+
+    <test name="UI Smoke Tests">
+        <classes>
+
+            <class name="ru.tarkovskiy.ui.tests.LoginUiTest">
+                <methods>
+                    <include name="shouldLoginSuccessfully"/>
+                </methods>
+            </class>
+
+            <class name="ru.tarkovskiy.ui.tests.TaskUiTest">
+                <methods>
+                    <include name="shouldCreateTaskSuccessfully"/>
+                    <include name="shouldEditTaskSuccessfully"/>
+                    <include name="shouldDeleteTaskSuccessfully"/>
+                </methods>
+            </class>
+
+        </classes>
+    </test>
+
+</suite>

@@ -1,6 +1,13 @@
 name: Task Manager test suites
 on:
   workflow_dispatch:
+    inputs:
+      suite:
+        description: Test suites to run
+        type: choice
+        required: true
+        default: Smoke
+        options: [Smoke, Regression, All]
   push:
     branches: [develop]
 permissions:
@@ -10,23 +17,37 @@ concurrency:
   group: task-manager-test-environment
   cancel-in-progress: false
 jobs:
+  select:
+    runs-on: windows-latest
+    timeout-minutes: 5
+    outputs:
+      matrix: ${{ steps.suites.outputs.matrix }}
+    steps:
+      - name: Select test suites
+        id: suites
+        shell: powershell
+        env:
+          SUITE_SELECTION: ${{ github.event_name == 'workflow_dispatch' && inputs.suite || 'All' }}
+        run: |
+          if ($env:SUITE_SELECTION -notin @('Smoke','Regression','All')) { throw 'Invalid suite selection.' }
+          $include = @()
+          foreach ($kind in @('Smoke','Regression')) {
+            if ($env:SUITE_SELECTION -eq 'All' -or $env:SUITE_SELECTION -eq $kind) {
+              $include += @{ suite = "Api$kind"; module = 'api-tests' }
+              $include += @{ suite = "Ui$kind"; module = 'ui-tests' }
+            }
+          }
+          $matrix = @{ include = $include } | ConvertTo-Json -Depth 4 -Compress
+          "matrix=$matrix" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
   test:
+    needs: select
     runs-on: windows-latest
     environment: test
     timeout-minutes: 45
     strategy:
       fail-fast: false
       max-parallel: 1
-      matrix:
-        include:
-          - suite: ApiSmoke
-            module: api-tests
-          - suite: ApiRegression
-            module: api-tests
-          - suite: UiSmoke
-            module: ui-tests
-          - suite: UiRegression
-            module: ui-tests
+      matrix: ${{ fromJSON(needs.select.outputs.matrix) }}
     env:
       TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
       TEST_DB_URL: ${{ secrets.TEST_DB_URL }}
@@ -38,18 +59,37 @@ jobs:
       HEADLESS: 'true'
     steps:
       - uses: actions/checkout@v4
+      - name: Validate test environment settings
+        id: settings
+        shell: powershell
+        run: |
+          $missing = $false
+          foreach ($name in @('TEST_USER_PASSWORD','TEST_DB_URL','TEST_DB_USERNAME','TEST_DB_PASSWORD','TEST_ALLOWED_DB_HOST','TEST_ALLOWED_DB_PORT')) {
+            if ([string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($name))) {
+              Write-Host "$name : MISSING"
+              $missing = $true
+            } else { Write-Host "$name : PRESENT" }
+          }
+          if ($missing) { throw 'Configure the missing Secrets and Variables in GitHub environment test.' }
+          if ($env:TEST_BASE_URL -cne 'https://task-manager-test-588r.onrender.com') { throw 'Unapproved HTTP target.' }
+          . ./scripts/Initialize-TestSecrets.ps1 -LibraryOnly
+          try { Assert-TestDatabase $env:TEST_DB_URL $env:TEST_ALLOWED_DB_HOST $env:TEST_ALLOWED_DB_PORT }
+          catch { throw 'TEST database validation failed: check approved host, port, database and TLS mode. Values suppressed.' }
+          Write-Host 'PASS: approved test HTTP origin and JDBC settings; no network connection made.'
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
           cache: maven
       # Chrome is preinstalled on the GitHub-hosted Windows image.
-      - name: Check Chrome availability
+      - name: Check Java, Maven and Chrome availability
         shell: powershell
         run: |
+          Get-Command java.exe,mvn.cmd -ErrorAction Stop | Out-Null
           if (-not (Test-Path 'C:/Program Files/Google/Chrome/Application/chrome.exe')) {
             throw 'Chrome is unavailable on this runner.'
           }
+          Write-Host 'PASS: Java, Maven and Chrome executables available; UI runs use headless mode.'
       - name: Wait for test Render cold start
         shell: powershell
         run: |
@@ -67,13 +107,17 @@ jobs:
           }
           if (-not $ready) { throw 'Test Render did not become ready within four minutes.' }
       - name: Run ${{ matrix.suite }}
+        id: run
         shell: powershell
         run: ./scripts/Invoke-TestMaven.ps1 -Suite ${{ matrix.suite }} -Headless -FromEnvironment
       - name: Audit textual results before upload
         id: audit
-        if: always()
+        if: always() && steps.settings.outcome == 'success' && steps.run.outcome != 'skipped'
         shell: powershell
-        run: ./scripts/Test-ReportSecrets.ps1 -FromEnvironment -Paths '${{ matrix.module }}/target'
+        run: |
+          if (Test-Path '${{ matrix.module }}/target') {
+            ./scripts/Test-ReportSecrets.ps1 -FromEnvironment -Paths '${{ matrix.module }}/target'
+          } else { throw 'No test results were produced; artifact upload refused.' }
       - name: Upload audited Allure results
         if: always() && steps.audit.outcome == 'success'
         uses: actions/upload-artifact@v4
@@ -84,22 +128,35 @@ jobs:
           retention-days: 14
   reports:
     needs: test
-    if: always()
+    if: always() && needs.test.result != 'skipped' && needs.test.result != 'cancelled'
     runs-on: windows-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
       - uses: actions/download-artifact@v4
         with:
           pattern: results-*
           path: target/download
+      - name: Find audited API and UI result pairs
+        id: available
+        shell: powershell
+        run: |
+          $found = $false
+          foreach ($kind in @('Smoke','Regression')) {
+            if ((Test-Path "target/download/results-Api$kind") -and (Test-Path "target/download/results-Ui$kind")) { $found = $true }
+          }
+          "found=$($found.ToString().ToLowerInvariant())" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          if (-not $found) { Write-Host 'No audited API/UI result pair: combined reports skipped. Inspect test jobs for the primary failure.' }
+      - uses: actions/setup-java@v4
+        if: steps.available.outputs.found == 'true'
+        with:
+          distribution: temurin
+          java-version: '17'
       - name: Install pinned Allure CLI on the disposable runner
+        if: steps.available.outputs.found == 'true'
         shell: powershell
         run: npm install --global allure-commandline@2.46.1
       - name: Build separate combined Smoke and Regression reports
+        if: steps.available.outputs.found == 'true'
         shell: powershell
         run: |
           foreach ($kind in @('Smoke','Regression')) {
@@ -111,6 +168,7 @@ jobs:
             }
           }
       - uses: actions/upload-artifact@v4
+        if: steps.available.outputs.found == 'true'
         with:
           name: combined-allure-reports
           path: target/allure-*/

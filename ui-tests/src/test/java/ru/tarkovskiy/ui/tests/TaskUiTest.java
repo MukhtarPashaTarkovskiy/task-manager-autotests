@@ -1,5 +1,14 @@
 package ru.tarkovskiy.ui.tests;
 
+import io.qameta.allure.Allure;
+import io.qameta.allure.Description;
+import io.qameta.allure.Epic;
+import io.qameta.allure.Feature;
+import io.qameta.allure.Severity;
+import io.qameta.allure.SeverityLevel;
+import io.qameta.allure.Story;
+import io.qameta.allure.Step;
+
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -95,7 +104,13 @@ public class TaskUiTest extends BaseUiTest {
         }
     }
 
-    @Test
+    @Test(description = "UI: Отображение страницы задач после входа")
+    @Epic("Task Manager")
+    @Feature("Управление задачами")
+    @Story("Отображение страницы задач после входа")
+    @Severity(SeverityLevel.NORMAL)
+    @Description("Отображение страницы задач после входа. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Step("Отображение страницы задач после входа")
     public void shouldDisplayTasksPageAfterLogin() {
 
         // Авторизуемся существующим тестовым пользователем
@@ -132,7 +147,13 @@ public class TaskUiTest extends BaseUiTest {
         );
     }
 
-    @Test
+    @Test(description = "UI: Загрузка таблицы задач")
+    @Epic("Task Manager")
+    @Feature("Управление задачами")
+    @Story("Загрузка таблицы задач")
+    @Severity(SeverityLevel.NORMAL)
+    @Description("Загрузка таблицы задач. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Step("Загрузка таблицы задач")
     public void shouldLoadTasksTable() {
 
         new LoginPage(driver)
@@ -153,7 +174,13 @@ public class TaskUiTest extends BaseUiTest {
         );
     }
 
-    @Test
+    @Test(description = "UI: Создание задачи с обязательными полями")
+    @Epic("Task Manager")
+    @Feature("Управление задачами")
+    @Story("Создание задачи с обязательными полями")
+    @Severity(SeverityLevel.CRITICAL)
+    @Description("Создание задачи с обязательными полями. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Step("Создание задачи с обязательными полями")
     public void shouldCreateTaskSuccessfully() throws SQLException {
 
         taskTitleForCleanup = TaskDataGenerator.newTaskTitle();
@@ -203,7 +230,13 @@ public class TaskUiTest extends BaseUiTest {
         assertNull(task.deadline(), "Дата должна быть пустой");
     }
 
-    @Test
+    @Test(description = "UI: Создание задачи со всеми полями")
+    @Epic("Task Manager")
+    @Feature("Управление задачами")
+    @Story("Создание задачи со всеми полями")
+    @Severity(SeverityLevel.NORMAL)
+    @Description("Создание задачи со всеми полями. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Step("Создание задачи со всеми полями")
     public void shouldCreateTaskWithAllFields() throws SQLException {
 
         taskTitleForCleanup = TaskDataGenerator.newTaskTitle();
@@ -249,7 +282,13 @@ public class TaskUiTest extends BaseUiTest {
         };
     }
 
-    @Test(dataProvider = "taskData")
+    @Test(dataProvider = "taskData", description = "UI: Создание задачи с вариантами статуса приоритета и срока")
+    @Epic("Task Manager")
+    @Feature("Управление задачами")
+    @Story("Создание задачи с вариантами статуса приоритета и срока")
+    @Severity(SeverityLevel.NORMAL)
+    @Description("Создание задачи с вариантами статуса приоритета и срока. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Step("Создание задачи с вариантами статуса приоритета и срока")
     public void shouldCreateTaskWithDifferentData(
             String status,
             String priority,
@@ -292,7 +331,13 @@ public class TaskUiTest extends BaseUiTest {
         assertEquals(task.deadline(), LocalDate.parse(deadline));
     }
 
-    @Test
+    @Test(description = "UI: Отклонение пустого названия задачи")
+    @Epic("Task Manager")
+    @Feature("Управление задачами")
+    @Story("Отклонение пустого названия задачи")
+    @Severity(SeverityLevel.NORMAL)
+    @Description("Отклонение пустого названия задачи. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Step("Отклонение пустого названия задачи")
     public void shouldNotCreateTaskWithEmptyTitle() {
 
         new LoginPage(driver)
@@ -334,7 +379,13 @@ public class TaskUiTest extends BaseUiTest {
         };
     }
 
-    @Test(dataProvider = "invalidTaskTitles")
+    @Test(dataProvider = "invalidTaskTitles", description = "UI: Отклонение слишком короткого названия задачи")
+    @Epic("Task Manager")
+    @Feature("Управление задачами")
+    @Story("Отклонение слишком короткого названия задачи")
+    @Severity(SeverityLevel.NORMAL)
+    @Description("Отклонение слишком короткого названия задачи. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Step("Отклонение слишком короткого названия задачи")
     public void shouldRejectTooShortTaskTitle(String title) {
 
         new LoginPage(driver)
@@ -377,7 +428,13 @@ public class TaskUiTest extends BaseUiTest {
         };
     }
 
-    @Test(dataProvider = "validTaskTitleLengths")
+    @Test(dataProvider = "validTaskTitleLengths", description = "UI: Допустимая длина названия задачи")
+    @Epic("Task Manager")
+    @Feature("Управление задачами")
+    @Story("Допустимая длина названия задачи")
+    @Severity(SeverityLevel.NORMAL)
+    @Description("Допустимая длина названия задачи. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Step("Допустимая длина названия задачи")
     public void shouldCreateTaskWithValidTitleLength(int length)
             throws SQLException {
 
@@ -413,7 +470,13 @@ public class TaskUiTest extends BaseUiTest {
         );
     }
 
-    @Test
+    @Test(description = "UI: Ограничение ввода названия задачи")
+    @Epic("Task Manager")
+    @Feature("Управление задачами")
+    @Story("Ограничение ввода названия задачи")
+    @Severity(SeverityLevel.NORMAL)
+    @Description("Ограничение ввода названия задачи. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Step("Ограничение ввода названия задачи")
     public void shouldLimitTaskTitleTo100Characters() {
 
         new LoginPage(driver)
@@ -456,7 +519,13 @@ public class TaskUiTest extends BaseUiTest {
         };
     }
 
-    @Test(dataProvider = "taskDescriptionLengths")
+    @Test(dataProvider = "taskDescriptionLengths", description = "UI: Граничная длина описания задачи")
+    @Epic("Task Manager")
+    @Feature("Управление задачами")
+    @Story("Граничная длина описания задачи")
+    @Severity(SeverityLevel.NORMAL)
+    @Description("Граничная длина описания задачи. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Step("Граничная длина описания задачи")
     public void shouldHandleDescriptionBoundaryValues(int length)
             throws SQLException {
 
@@ -504,7 +573,13 @@ public class TaskUiTest extends BaseUiTest {
         );
     }
 
-    @Test
+    @Test(description = "UI: Редактирование задачи и проверка БД")
+    @Epic("Task Manager")
+    @Feature("Управление задачами")
+    @Story("Редактирование задачи и проверка БД")
+    @Severity(SeverityLevel.CRITICAL)
+    @Description("Редактирование задачи и проверка БД. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Step("Редактирование задачи и проверка БД")
     public void shouldEditTaskSuccessfully() throws SQLException {
 
         taskTitleForCleanup = TaskDataGenerator.newTaskTitle();
@@ -548,7 +623,13 @@ public class TaskUiTest extends BaseUiTest {
         assertEquals(updatedTask.priority(), "HIGH");
     }
 
-    @Test
+    @Test(description = "UI: Удаление задачи и проверка отсутствия в БД")
+    @Epic("Task Manager")
+    @Feature("Управление задачами")
+    @Story("Удаление задачи и проверка отсутствия в БД")
+    @Severity(SeverityLevel.CRITICAL)
+    @Description("Удаление задачи и проверка отсутствия в БД. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Step("Удаление задачи и проверка отсутствия в БД")
     public void shouldDeleteTaskSuccessfully() throws SQLException {
 
         taskTitleForCleanup = TaskDataGenerator.newTaskTitle();
@@ -590,7 +671,13 @@ public class TaskUiTest extends BaseUiTest {
         );
     }
 
-    @Test
+    @Test(description = "UI: Отмена удаления задачи")
+    @Epic("Task Manager")
+    @Feature("Управление задачами")
+    @Story("Отмена удаления задачи")
+    @Severity(SeverityLevel.NORMAL)
+    @Description("Отмена удаления задачи. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Step("Отмена удаления задачи")
     public void shouldCancelTaskDeletion() throws SQLException {
 
         taskTitleForCleanup = TaskDataGenerator.newTaskTitle();

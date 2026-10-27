@@ -1,0 +1,118 @@
+name: Task Manager test suites
+on:
+  workflow_dispatch:
+  push:
+    branches: [develop]
+permissions:
+  contents: read
+# All suites use one test database/user: never overlap runs or matrix jobs.
+concurrency:
+  group: task-manager-test-environment
+  cancel-in-progress: false
+jobs:
+  test:
+    runs-on: windows-latest
+    environment: test
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        include:
+          - suite: ApiSmoke
+            module: api-tests
+          - suite: ApiRegression
+            module: api-tests
+          - suite: UiSmoke
+            module: ui-tests
+          - suite: UiRegression
+            module: ui-tests
+    env:
+      TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
+      TEST_DB_URL: ${{ secrets.TEST_DB_URL }}
+      TEST_DB_USERNAME: ${{ secrets.TEST_DB_USERNAME }}
+      TEST_DB_PASSWORD: ${{ secrets.TEST_DB_PASSWORD }}
+      TEST_ALLOWED_DB_HOST: ${{ secrets.TEST_ALLOWED_DB_HOST }}
+      TEST_ALLOWED_DB_PORT: ${{ vars.TEST_ALLOWED_DB_PORT }}
+      TEST_BASE_URL: https://task-manager-test-588r.onrender.com
+      HEADLESS: 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+      # Chrome is preinstalled on the GitHub-hosted Windows image.
+      - name: Check Chrome availability
+        shell: powershell
+        run: |
+          if (-not (Test-Path 'C:/Program Files/Google/Chrome/Application/chrome.exe')) {
+            throw 'Chrome is unavailable on this runner.'
+          }
+      - name: Wait for test Render cold start
+        shell: powershell
+        run: |
+          $ready = $false
+          $deadline = [DateTime]::UtcNow.AddMinutes(4)
+          while ([DateTime]::UtcNow -lt $deadline) {
+            try {
+              $r = Invoke-WebRequest -Uri "$env:TEST_BASE_URL/login" -UseBasicParsing -TimeoutSec 20 -MaximumRedirection 0
+              if ($r.StatusCode -eq 200 -and $r.Content.Contains('id="username"') -and $r.Content.Contains('id="password"')) {
+                $ready = $true
+                break
+              }
+            } catch { Write-Host 'Test Render is warming up.' }
+            Start-Sleep -Seconds 5
+          }
+          if (-not $ready) { throw 'Test Render did not become ready within four minutes.' }
+      - name: Run ${{ matrix.suite }}
+        shell: powershell
+        run: ./scripts/Invoke-TestMaven.ps1 -Suite ${{ matrix.suite }} -Headless -FromEnvironment
+      - name: Audit textual results before upload
+        id: audit
+        if: always()
+        shell: powershell
+        run: ./scripts/Test-ReportSecrets.ps1 -FromEnvironment -Paths '${{ matrix.module }}/target'
+      - name: Upload audited Allure results
+        if: always() && steps.audit.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: results-${{ matrix.suite }}
+          path: ${{ matrix.module }}/target/allure-results/
+          if-no-files-found: error
+          retention-days: 14
+  reports:
+    needs: test
+    if: always()
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: results-*
+          path: target/download
+      - name: Install pinned Allure CLI on the disposable runner
+        shell: powershell
+        run: npm install --global allure-commandline@2.46.1
+      - name: Build separate combined Smoke and Regression reports
+        shell: powershell
+        run: |
+          foreach ($kind in @('Smoke','Regression')) {
+            $api = "target/download/results-Api$kind"
+            $ui = "target/download/results-Ui$kind"
+            if ((Test-Path $api) -and (Test-Path $ui)) {
+              allure generate $api $ui --clean -o "target/allure-$kind"
+              if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            }
+          }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: combined-allure-reports
+          path: target/allure-*/
+          if-no-files-found: error
+          retention-days: 14

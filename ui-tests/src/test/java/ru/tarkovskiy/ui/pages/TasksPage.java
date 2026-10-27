@@ -1,5 +1,6 @@
 package ru.tarkovskiy.ui.pages;
 
+import io.qameta.allure.Step;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
@@ -18,6 +19,7 @@ public class TasksPage extends BasePage {
         super(driver);
     }
 
+    @Step("Открыть страницу")
     public TasksPage open(String baseUrl) {
         driver.get(baseUrl + TASKS_URL);
 
@@ -44,6 +46,7 @@ public class TasksPage extends BasePage {
         return findVisible(tasksTable).isDisplayed();
     }
 
+    @Step("Дождаться загрузки списка задач")
     public TasksPage waitForTasksLoaded() {
 
         wait.until(driver -> {
@@ -68,6 +71,7 @@ public class TasksPage extends BasePage {
         );
     }
 
+    @Step("Подтвердить удаление задачи")
     public TasksPage deleteTask(long taskId) {
 
         By taskRow = By.xpath(
@@ -94,6 +98,7 @@ public class TasksPage extends BasePage {
         return this;
     }
 
+    @Step("Отменить удаление задачи")
     public TasksPage cancelTaskDeletion(long taskId) {
 
         By taskRow = By.xpath(

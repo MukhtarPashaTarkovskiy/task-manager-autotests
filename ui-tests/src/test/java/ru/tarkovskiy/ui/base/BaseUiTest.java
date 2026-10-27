@@ -1,6 +1,10 @@
 package ru.tarkovskiy.ui.base;
 
 import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.OutputType;
+import org.openqa.selenium.TakesScreenshot;
+import io.qameta.allure.Allure;
+import java.io.ByteArrayInputStream;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.support.ui.WebDriverWait;
@@ -19,6 +23,24 @@ public class BaseUiTest {
     protected LoginPage loginPage;
     protected static final String BASE_URL = UiConfig.BASE_URL;
 
+    public void attachFailureScreenshot() {
+        attachScreenshot("Состояние браузера при падении");
+    }
+
+    public void attachScreenshot(String name) {
+        if (!(driver instanceof TakesScreenshot screenshot)) {
+            return;
+        }
+        try {
+            Allure.addAttachment(name, "image/png",
+                    new ByteArrayInputStream(screenshot.getScreenshotAs(OutputType.BYTES)), ".png");
+        } catch (RuntimeException ignored) {
+            // Reporting must never replace the original failure or interrupt cleanup.
+            // Do not log exception text: driver diagnostics can contain sensitive data.
+            System.err.println("Allure: скриншот недоступен; исходная ошибка сохранена.");
+        }
+    }
+
     @BeforeSuite(alwaysRun = true)
     public void waitForTestServer() throws Exception {
         new RenderReadiness().waitForRender();
@@ -28,7 +50,12 @@ public class BaseUiTest {
     public void setUp() {
 
         ChromeOptions options = new ChromeOptions();
-        options.addArguments("--start-maximized");
+        boolean headless = "true".equalsIgnoreCase(System.getenv("HEADLESS"));
+        if (headless) {
+            options.addArguments("--headless=new", "--window-size=1440,1000", "--disable-dev-shm-usage");
+        } else {
+            options.addArguments("--start-maximized");
+        }
 
         driver = new ChromeDriver(options);
         loginPage = new LoginPage(driver);

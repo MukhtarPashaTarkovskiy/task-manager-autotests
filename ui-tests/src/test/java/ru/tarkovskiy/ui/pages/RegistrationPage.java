@@ -1,5 +1,6 @@
 package ru.tarkovskiy.ui.pages;
 
+import io.qameta.allure.Step;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.support.ui.ExpectedConditions;
@@ -25,31 +26,37 @@ public class RegistrationPage extends BasePage {
         super(driver);
     }
 
+    @Step("Открыть страницу")
     public RegistrationPage open(String baseUrl) {
         driver.get(baseUrl + REGISTER_URL);
         return this;
     }
 
+    @Step("Заполнить логин")
     public RegistrationPage enterUsername(String username) {
         type(usernameInput, username);
         return this;
     }
 
+    @Step("Заполнить email")
     public RegistrationPage enterEmail(String email) {
         type(emailInput, email);
         return this;
     }
 
+    @Step("Заполнить пароль без записи значения")
     public RegistrationPage enterPassword(String password) {
         type(passwordInput, password);
         return this;
     }
 
+    @Step("Отправить форму")
     public RegistrationPage submit() {
         click(registerButton);
         return this;
     }
 
+    @Step("Зарегистрировать пользователя")
     public RegistrationPage register(
             String username,
             String email,
@@ -79,6 +86,7 @@ public class RegistrationPage extends BasePage {
         return findVisible(locator).isDisplayed();
     }
 
+    @Step("Перейти ко входу")
     public LoginPage clickLoginLink() {
         click(loginLink);
 

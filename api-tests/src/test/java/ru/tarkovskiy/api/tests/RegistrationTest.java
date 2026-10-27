@@ -1,6 +1,15 @@
 
 package ru.tarkovskiy.api.tests;
 
+import io.qameta.allure.Allure;
+import io.qameta.allure.Description;
+import io.qameta.allure.Epic;
+import io.qameta.allure.Feature;
+import io.qameta.allure.Severity;
+import io.qameta.allure.SeverityLevel;
+import io.qameta.allure.Story;
+import io.qameta.allure.Step;
+
 import io.restassured.response.Response;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -22,7 +31,13 @@ import static ru.tarkovskiy.api.config.SchemaPaths.REGISTRATION_VALIDATION_ERROR
 
 public class RegistrationTest extends BaseApiTest {
 
-    @Test
+    @Test(description = "API: Успешная регистрация пользователя")
+    @Epic("Task Manager")
+    @Feature("Регистрация")
+    @Story("Успешная регистрация пользователя")
+    @Severity(SeverityLevel.CRITICAL)
+    @Description("Успешная регистрация пользователя. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Step("Успешная регистрация пользователя")
     public void shouldRegisterUserSuccessfully() throws Exception {
 
         RegistrationRequest user = TestDataGenerator.newUser();
@@ -41,7 +56,13 @@ public class RegistrationTest extends BaseApiTest {
         );
     }
 
-    @Test
+    @Test(description = "API: Отклонение занятого логина")
+    @Epic("Task Manager")
+    @Feature("Регистрация")
+    @Story("Отклонение занятого логина")
+    @Severity(SeverityLevel.NORMAL)
+    @Description("Отклонение занятого логина. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Step("Отклонение занятого логина")
     public void shouldNotRegisterUserWithDuplicateUsername() throws SQLException {
 
         RegistrationRequest firstUser =
@@ -85,7 +106,13 @@ public class RegistrationTest extends BaseApiTest {
         );
     }
 
-    @Test
+    @Test(description = "API: Отклонение занятого email")
+    @Epic("Task Manager")
+    @Feature("Регистрация")
+    @Story("Отклонение занятого email")
+    @Severity(SeverityLevel.NORMAL)
+    @Description("Отклонение занятого email. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Step("Отклонение занятого email")
     public void shouldNotRegisterUserWithDuplicateEmail() throws SQLException {
 
         RegistrationRequest firstUser =
@@ -136,7 +163,13 @@ public class RegistrationTest extends BaseApiTest {
         };
     }
 
-    @Test(dataProvider = "invalidEmails")
+    @Test(dataProvider = "invalidEmails", description = "API: Проверка некорректного email")
+    @Epic("Task Manager")
+    @Feature("Регистрация")
+    @Story("Проверка некорректного email")
+    @Severity(SeverityLevel.NORMAL)
+    @Description("Проверка некорректного email. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Step("Проверка некорректного email")
     public void shouldNotRegisterUserWithInvalidEmail(String invalidEmail)
             throws SQLException {
 
@@ -171,7 +204,13 @@ public class RegistrationTest extends BaseApiTest {
         };
     }
 
-    @Test(dataProvider = "emptyRequiredFields")
+    @Test(dataProvider = "emptyRequiredFields", description = "API: Проверка обязательных полей регистрации")
+    @Epic("Task Manager")
+    @Feature("Регистрация")
+    @Story("Проверка обязательных полей регистрации")
+    @Severity(SeverityLevel.NORMAL)
+    @Description("Проверка обязательных полей регистрации. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Step("Проверка обязательных полей регистрации")
     public void shouldNotRegisterUserWithEmptyFields(
             String emptyValue,
             String fieldName,
@@ -217,7 +256,13 @@ public class RegistrationTest extends BaseApiTest {
         };
     }
 
-    @Test(dataProvider = "usernameBoundaries")
+    @Test(dataProvider = "usernameBoundaries", description = "API: Проверка граничной длины логина")
+    @Epic("Task Manager")
+    @Feature("Регистрация")
+    @Story("Проверка граничной длины логина")
+    @Severity(SeverityLevel.NORMAL)
+    @Description("Проверка граничной длины логина. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Step("Проверка граничной длины логина")
     public void shouldValidateUsernameBoundaries(
             String username,
             int expectedStatus) throws SQLException {
@@ -271,7 +316,13 @@ public class RegistrationTest extends BaseApiTest {
         };
     }
 
-    @Test(dataProvider = "passwordBoundaries")
+    @Test(dataProvider = "passwordBoundaries", description = "API: Проверка граничной длины пароля")
+    @Epic("Task Manager")
+    @Feature("Регистрация")
+    @Story("Проверка граничной длины пароля")
+    @Severity(SeverityLevel.NORMAL)
+    @Description("Проверка граничной длины пароля. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Step("Проверка граничной длины пароля")
     public void shouldValidatePasswordBoundaries(
             String password,
             int expectedStatus) throws SQLException {

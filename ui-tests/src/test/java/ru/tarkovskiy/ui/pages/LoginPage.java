@@ -1,6 +1,7 @@
 package ru.tarkovskiy.ui.pages;
 
 import org.openqa.selenium.By;
+import io.qameta.allure.Step;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.ExpectedConditions;
@@ -24,6 +25,7 @@ public class LoginPage extends BasePage {
         super(driver);
     }
 
+    @Step("Открыть страницу")
     public LoginPage open(String baseUrl) {
         driver.get(baseUrl + LOGIN_URL);
         return this;
@@ -45,6 +47,7 @@ public class LoginPage extends BasePage {
         return findVisible(locator).isDisplayed();
     }
 
+    @Step("Дождаться успешного входа")
     public LoginPage waitForSuccessfulLogin(String baseUrl) {
         wait.until(
                 ExpectedConditions.urlToBe(baseUrl + "/tasks")
@@ -52,21 +55,25 @@ public class LoginPage extends BasePage {
         return this;
     }
 
+    @Step("Заполнить логин")
     public LoginPage enterUsername(String username) {
         type(usernameInput, username);
         return this;
     }
 
+    @Step("Заполнить пароль без записи значения")
     public LoginPage enterPassword(String password) {
         type(passwordInput, password);
         return this;
     }
 
+    @Step("Отправить форму")
     public LoginPage submit() {
         click(loginButton);
         return this;
     }
 
+    @Step("Войти пользователем")
     public LoginPage login(String username, String password) {
         enterUsername(username);
         enterPassword(password);
@@ -74,6 +81,7 @@ public class LoginPage extends BasePage {
         return this;
     }
 
+    @Step("Дождаться отклонения входа")
     public LoginPage waitForLoginError(String baseUrl) {
         wait.until(
                 ExpectedConditions.urlToBe(baseUrl + "/login?error")
@@ -105,6 +113,7 @@ public class LoginPage extends BasePage {
         );
     }
 
+    @Step("Перейти к регистрации")
     public RegistrationPage clickRegistrationLink() {
         click(registrationLink);
 

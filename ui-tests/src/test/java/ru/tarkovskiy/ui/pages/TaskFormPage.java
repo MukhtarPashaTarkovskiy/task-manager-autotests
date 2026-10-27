@@ -1,5 +1,6 @@
 package ru.tarkovskiy.ui.pages;
 
+import io.qameta.allure.Step;
 import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.WebDriver;
@@ -23,26 +24,31 @@ public class TaskFormPage extends BasePage {
         super(driver);
     }
 
+    @Step("Открыть страницу")
     public TaskFormPage open(String baseUrl) {
         driver.get(baseUrl + "/tasks/new");
         return this;
     }
 
+    @Step("Заполнить название задачи")
     public TaskFormPage enterTitle(String title) {
         type(titleInput, title);
         return this;
     }
 
+    @Step("Заполнить описание задачи")
     public TaskFormPage enterDescription(String description) {
         type(descriptionInput, description);
         return this;
     }
 
+    @Step("Отправить форму")
     public TaskFormPage submit() {
         click(createButton);
         return this;
     }
 
+    @Step("Дождаться создания задачи")
     public TaskFormPage waitForSuccessfulCreation(String baseUrl) {
         wait.until(
                 ExpectedConditions.urlToBe(baseUrl + "/tasks")
@@ -50,6 +56,7 @@ public class TaskFormPage extends BasePage {
         return this;
     }
 
+    @Step("Установить срок задачи")
     public TaskFormPage enterDeadline(String deadline) {
 
         WebElement element = findVisible(deadlineInput);
@@ -75,12 +82,14 @@ public class TaskFormPage extends BasePage {
         return this;
     }
 
+    @Step("Выбрать статус задачи")
     public TaskFormPage selectStatus(String status) {
         new Select(findVisible(statusSelect))
                 .selectByValue(status);
         return this;
     }
 
+    @Step("Выбрать приоритет задачи")
     public TaskFormPage selectPriority(String priority) {
         new Select(findVisible(prioritySelect))
                 .selectByValue(priority);

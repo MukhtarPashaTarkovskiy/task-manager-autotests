@@ -1,5 +1,14 @@
 package ru.tarkovskiy.api.tests;
 
+import io.qameta.allure.Allure;
+import io.qameta.allure.Description;
+import io.qameta.allure.Epic;
+import io.qameta.allure.Feature;
+import io.qameta.allure.Severity;
+import io.qameta.allure.SeverityLevel;
+import io.qameta.allure.Story;
+import io.qameta.allure.Step;
+
 import java.sql.SQLException;
 
 import io.restassured.filter.session.SessionFilter;
@@ -39,6 +48,7 @@ public class TaskApiTest extends BaseApiTest {
     }
 
     // Авторизация постоянного тестового пользователя.
+    @Step("Авторизовать постоянного тестового пользователя")
     private void loginAsTestUser() {
         authClient.login(TestData.EXISTING_USERNAME, testPassword())
                 .then()
@@ -60,6 +70,7 @@ public class TaskApiTest extends BaseApiTest {
     }
 
     // Создание обычной задачи с защитой очистки; для граничных заголовков не применять.
+    @Step("Подготовить задачу с регистрацией безопасной очистки")
     private long createTestTask(TaskClient client, TaskRequest task) {
         trackGeneratedTask(task);
         Response response = client.createTask(task);
@@ -70,6 +81,7 @@ public class TaskApiTest extends BaseApiTest {
         return id;
     }
 
+    @Step("Проверить HTTP 200 JSON Schema и поля задачи")
     private void assertTaskFields(Response response, TaskRequest task) {
         response.then()
                 .statusCode(200)
@@ -80,6 +92,7 @@ public class TaskApiTest extends BaseApiTest {
                 .body("priority", equalTo(task.priority()));
     }
 
+    @Step("Проверить существование задачи в тестовой БД")
     private void assertTaskExistsInDb(long taskId) throws SQLException {
         assertTrue(
                 TaskDbHelper.taskExists(taskId, TestData.EXISTING_USERNAME),
@@ -87,7 +100,13 @@ public class TaskApiTest extends BaseApiTest {
         );
     }
 
-    @Test
+    @Test(description = "API: Создание задачи с обязательными полями")
+    @Epic("Task Manager")
+    @Feature("Управление задачами")
+    @Story("Создание задачи с обязательными полями")
+    @Severity(SeverityLevel.CRITICAL)
+    @Description("Создание задачи с обязательными полями. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Step("Создание задачи с обязательными полями")
     public void shouldCreateTaskSuccessfully() throws SQLException {
         loginAsTestUser();
         TaskRequest task = TaskDataGenerator.newTask();
@@ -98,7 +117,13 @@ public class TaskApiTest extends BaseApiTest {
         assertTaskExistsInDb(taskId);
     }
 
-    @Test
+    @Test(description = "API: Получение задачи по идентификатору")
+    @Epic("Task Manager")
+    @Feature("Управление задачами")
+    @Story("Получение задачи по идентификатору")
+    @Severity(SeverityLevel.CRITICAL)
+    @Description("Получение задачи по идентификатору. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Step("Получение задачи по идентификатору")
     public void shouldGetTaskByIdSuccessfully() {
         loginAsTestUser();
         TaskRequest task = TaskDataGenerator.newTask();
@@ -109,7 +134,13 @@ public class TaskApiTest extends BaseApiTest {
         response.then().body("id", equalTo((int) taskId));
     }
 
-    @Test
+    @Test(description = "API: Получение списка задач")
+    @Epic("Task Manager")
+    @Feature("Управление задачами")
+    @Story("Получение списка задач")
+    @Severity(SeverityLevel.CRITICAL)
+    @Description("Получение списка задач. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Step("Получение списка задач")
     public void shouldGetAllTasksSuccessfully() {
         loginAsTestUser();
         TaskRequest task = TaskDataGenerator.newTask();
@@ -121,7 +152,13 @@ public class TaskApiTest extends BaseApiTest {
                 .body("find { it.id == " + taskId + " }.title", equalTo(task.title()));
     }
 
-    @Test
+    @Test(description = "API: Обработка отсутствующей задачи")
+    @Epic("Task Manager")
+    @Feature("Управление задачами")
+    @Story("Обработка отсутствующей задачи")
+    @Severity(SeverityLevel.NORMAL)
+    @Description("Обработка отсутствующей задачи. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Step("Обработка отсутствующей задачи")
     public void shouldNotGetNonExistingTask() {
         loginAsTestUser();
         taskClient.getTaskById(-1L).then().statusCode(404);
@@ -136,7 +173,13 @@ public class TaskApiTest extends BaseApiTest {
         };
     }
 
-    @Test(dataProvider = "invalidTaskTitles")
+    @Test(dataProvider = "invalidTaskTitles", description = "API: Отклонение некорректного названия задачи")
+    @Epic("Task Manager")
+    @Feature("Управление задачами")
+    @Story("Отклонение некорректного названия задачи")
+    @Severity(SeverityLevel.NORMAL)
+    @Description("Отклонение некорректного названия задачи. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Step("Отклонение некорректного названия задачи")
     public void shouldNotCreateTaskWithInvalidTitle(String invalidTitle, String description) {
         loginAsTestUser();
         TaskRequest task = new TaskRequest(
@@ -150,7 +193,13 @@ public class TaskApiTest extends BaseApiTest {
         return new Object[][]{{"a".repeat(3)}, {"a".repeat(100)}};
     }
 
-    @Test(dataProvider = "validTaskTitleBoundaries")
+    @Test(dataProvider = "validTaskTitleBoundaries", description = "API: Создание задачи с граничной длиной названия")
+    @Epic("Task Manager")
+    @Feature("Управление задачами")
+    @Story("Создание задачи с граничной длиной названия")
+    @Severity(SeverityLevel.NORMAL)
+    @Description("Создание задачи с граничной длиной названия. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Step("Создание задачи с граничной длиной названия")
     public void shouldCreateTaskWithValidTitleBoundaries(String title) throws SQLException {
         loginAsTestUser();
         assertFalse(
@@ -180,7 +229,13 @@ public class TaskApiTest extends BaseApiTest {
         return new Object[][]{{"TODO"}, {"IN_PROGRESS"}, {"DONE"}};
     }
 
-    @Test(dataProvider = "validTaskStatuses")
+    @Test(dataProvider = "validTaskStatuses", description = "API: Сохранение выбранного статуса задачи")
+    @Epic("Task Manager")
+    @Feature("Управление задачами")
+    @Story("Сохранение выбранного статуса задачи")
+    @Severity(SeverityLevel.NORMAL)
+    @Description("Сохранение выбранного статуса задачи. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Step("Сохранение выбранного статуса задачи")
     public void shouldCreateTaskWithValidStatus(String status) throws SQLException {
         loginAsTestUser();
         TaskRequest generated = TaskDataGenerator.newTask();
@@ -199,7 +254,13 @@ public class TaskApiTest extends BaseApiTest {
         return new Object[][]{{"LOW"}, {"MEDIUM"}, {"HIGH"}};
     }
 
-    @Test(dataProvider = "validTaskPriorities")
+    @Test(dataProvider = "validTaskPriorities", description = "API: Сохранение выбранного приоритета задачи")
+    @Epic("Task Manager")
+    @Feature("Управление задачами")
+    @Story("Сохранение выбранного приоритета задачи")
+    @Severity(SeverityLevel.NORMAL)
+    @Description("Сохранение выбранного приоритета задачи. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Step("Сохранение выбранного приоритета задачи")
     public void shouldCreateTaskWithValidPriority(String priority) throws SQLException {
         loginAsTestUser();
         TaskRequest generated = TaskDataGenerator.newTask();
@@ -223,7 +284,13 @@ public class TaskApiTest extends BaseApiTest {
         };
     }
 
-    @Test(dataProvider = "invalidTaskEnums")
+    @Test(dataProvider = "invalidTaskEnums", description = "API: Отклонение недопустимого статуса или приоритета")
+    @Epic("Task Manager")
+    @Feature("Управление задачами")
+    @Story("Отклонение недопустимого статуса или приоритета")
+    @Severity(SeverityLevel.NORMAL)
+    @Description("Отклонение недопустимого статуса или приоритета. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Step("Отклонение недопустимого статуса или приоритета")
     public void shouldNotCreateTaskWithInvalidEnums(
             String status, String priority, String description) {
         loginAsTestUser();
@@ -238,7 +305,13 @@ public class TaskApiTest extends BaseApiTest {
         taskClient.createTask(task).then().statusCode(400);
     }
 
-    @Test
+    @Test(description = "API: Редактирование задачи")
+    @Epic("Task Manager")
+    @Feature("Управление задачами")
+    @Story("Редактирование задачи")
+    @Severity(SeverityLevel.CRITICAL)
+    @Description("Редактирование задачи. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Step("Редактирование задачи")
     public void shouldUpdateTaskSuccessfully() throws SQLException {
         loginAsTestUser();
         TaskRequest original = TaskDataGenerator.newTask();
@@ -268,7 +341,13 @@ public class TaskApiTest extends BaseApiTest {
         };
     }
 
-    @Test(dataProvider = "invalidTaskUpdateData")
+    @Test(dataProvider = "invalidTaskUpdateData", description = "API: Отклонение некорректных изменений задачи")
+    @Epic("Task Manager")
+    @Feature("Управление задачами")
+    @Story("Отклонение некорректных изменений задачи")
+    @Severity(SeverityLevel.NORMAL)
+    @Description("Отклонение некорректных изменений задачи. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Step("Отклонение некорректных изменений задачи")
     public void shouldNotUpdateTaskWithInvalidData(
             String title, String status, String priority, String description) {
         loginAsTestUser();
@@ -282,7 +361,13 @@ public class TaskApiTest extends BaseApiTest {
         assertTaskFields(taskClient.getTaskById(taskId), original);
     }
 
-    @Test
+    @Test(description = "API: Удаление задачи и проверка отсутствия в БД")
+    @Epic("Task Manager")
+    @Feature("Управление задачами")
+    @Story("Удаление задачи и проверка отсутствия в БД")
+    @Severity(SeverityLevel.CRITICAL)
+    @Description("Удаление задачи и проверка отсутствия в БД. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Step("Удаление задачи и проверка отсутствия в БД")
     public void shouldDeleteTaskSuccessfully() throws SQLException {
         loginAsTestUser();
         TaskRequest task = TaskDataGenerator.newTask();
@@ -298,7 +383,13 @@ public class TaskApiTest extends BaseApiTest {
         taskClient.deleteTask(taskId).then().statusCode(404);
     }
 
-    @Test
+    @Test(description = "API: Защита API задач без авторизации")
+    @Epic("Task Manager")
+    @Feature("Управление задачами")
+    @Story("Защита API задач без авторизации")
+    @Severity(SeverityLevel.CRITICAL)
+    @Description("Защита API задач без авторизации. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Step("Защита API задач без авторизации")
     public void shouldNotGetTasksWithoutAuthentication() {
         // Новый SessionFilter в @BeforeMethod ещё не авторизован.
         taskClient.getAllTasks().then()
@@ -306,7 +397,13 @@ public class TaskApiTest extends BaseApiTest {
                 .header("Location", equalTo(BASE_URL + "/login"));
     }
 
-    @Test
+    @Test(description = "API: Запрет доступа к задаче другого пользователя")
+    @Epic("Task Manager")
+    @Feature("Управление задачами")
+    @Story("Запрет доступа к задаче другого пользователя")
+    @Severity(SeverityLevel.CRITICAL)
+    @Description("Запрет доступа к задаче другого пользователя. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Step("Запрет доступа к задаче другого пользователя")
     public void shouldNotGetAnotherUsersTask() {
         // Владелец использует основную сессию.
         loginAsTestUser();

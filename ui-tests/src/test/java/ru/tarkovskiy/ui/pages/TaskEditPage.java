@@ -1,5 +1,6 @@
 package ru.tarkovskiy.ui.pages;
 
+import io.qameta.allure.Step;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.support.ui.ExpectedConditions;
@@ -18,6 +19,7 @@ public class TaskEditPage extends BasePage {
         super(driver);
     }
 
+    @Step("Открыть страницу")
     public TaskEditPage open(String baseUrl, long taskId) {
         driver.get(baseUrl + "/tasks/" + taskId + "/edit");
 
@@ -33,33 +35,39 @@ public class TaskEditPage extends BasePage {
         return this;
     }
 
+    @Step("Заполнить название задачи")
     public TaskEditPage enterTitle(String title) {
         type(titleInput, title);
         return this;
     }
 
+    @Step("Заполнить описание задачи")
     public TaskEditPage enterDescription(String description) {
         type(descriptionInput, description);
         return this;
     }
 
+    @Step("Выбрать статус задачи")
     public TaskEditPage selectStatus(String status) {
         new Select(findVisible(statusSelect))
                 .selectByValue(status);
         return this;
     }
 
+    @Step("Выбрать приоритет задачи")
     public TaskEditPage selectPriority(String priority) {
         new Select(findVisible(prioritySelect))
                 .selectByValue(priority);
         return this;
     }
 
+    @Step("Сохранить изменения задачи")
     public TaskEditPage save() {
         click(saveButton);
         return this;
     }
 
+    @Step("Дождаться сохранения задачи")
     public TaskEditPage waitForSuccessfulUpdate(String baseUrl) {
         wait.until(ExpectedConditions.urlToBe(
                 baseUrl + "/tasks"

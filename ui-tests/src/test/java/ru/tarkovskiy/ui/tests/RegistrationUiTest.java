@@ -1,5 +1,14 @@
 package ru.tarkovskiy.ui.tests;
 
+import io.qameta.allure.Allure;
+import io.qameta.allure.Description;
+import io.qameta.allure.Epic;
+import io.qameta.allure.Feature;
+import io.qameta.allure.Severity;
+import io.qameta.allure.SeverityLevel;
+import io.qameta.allure.Story;
+import io.qameta.allure.Step;
+
 import org.openqa.selenium.support.ui.WebDriverWait;
 import org.testng.annotations.Test;
 import ru.tarkovskiy.ui.base.BaseUiTest;
@@ -31,7 +40,13 @@ public class RegistrationUiTest extends BaseUiTest {
         cleanup.cleanup();
     }
 
-    @Test
+    @Test(description = "UI: Переход к регистрации")
+    @Epic("Task Manager")
+    @Feature("Регистрация")
+    @Story("Переход к регистрации")
+    @Severity(SeverityLevel.NORMAL)
+    @Description("Переход к регистрации. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Step("Переход к регистрации")
     public void shouldNavigateToRegistrationPage() {
 
         LoginPage loginPage = new LoginPage(driver);
@@ -58,7 +73,13 @@ public class RegistrationUiTest extends BaseUiTest {
         };
     }
 
-    @Test(dataProvider = "registrationElements")
+    @Test(dataProvider = "registrationElements", description = "UI: Отображение элементов регистрации")
+    @Epic("Task Manager")
+    @Feature("Регистрация")
+    @Story("Отображение элементов регистрации")
+    @Severity(SeverityLevel.NORMAL)
+    @Description("Отображение элементов регистрации. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Step("Отображение элементов регистрации")
     public void shouldDisplayRegistrationElement(
             RegistrationElement element
     ) {
@@ -72,7 +93,13 @@ public class RegistrationUiTest extends BaseUiTest {
         );
     }
 
-    @Test
+    @Test(description = "UI: Переход к странице входа")
+    @Epic("Task Manager")
+    @Feature("Регистрация")
+    @Story("Переход к странице входа")
+    @Severity(SeverityLevel.NORMAL)
+    @Description("Переход к странице входа. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Step("Переход к странице входа")
     public void shouldNavigateToLoginPage() {
 
         RegistrationPage registrationPage =
@@ -99,7 +126,13 @@ public class RegistrationUiTest extends BaseUiTest {
         };
     }
 
-    @Test(dataProvider = "emptyRegistrationFields")
+    @Test(dataProvider = "emptyRegistrationFields", description = "UI: Проверка обязательных полей регистрации")
+    @Epic("Task Manager")
+    @Feature("Регистрация")
+    @Story("Проверка обязательных полей регистрации")
+    @Severity(SeverityLevel.NORMAL)
+    @Description("Проверка обязательных полей регистрации. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Step("Проверка обязательных полей регистрации")
     public void shouldRejectEmptyRegistrationFields(
             String username,
             String email,
@@ -147,7 +180,13 @@ public class RegistrationUiTest extends BaseUiTest {
         };
     }
 
-    @Test(dataProvider = "usernameBoundaries")
+    @Test(dataProvider = "usernameBoundaries", description = "UI: Проверка граничной длины логина")
+    @Epic("Task Manager")
+    @Feature("Регистрация")
+    @Story("Проверка граничной длины логина")
+    @Severity(SeverityLevel.NORMAL)
+    @Description("Проверка граничной длины логина. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Step("Проверка граничной длины логина")
     public void shouldValidateUsernameBoundaries(
             String username,
             int expectedLength,
@@ -182,7 +221,13 @@ public class RegistrationUiTest extends BaseUiTest {
         };
     }
 
-    @Test(dataProvider = "passwordBoundaries")
+    @Test(dataProvider = "passwordBoundaries", description = "UI: Проверка граничной длины пароля")
+    @Epic("Task Manager")
+    @Feature("Регистрация")
+    @Story("Проверка граничной длины пароля")
+    @Severity(SeverityLevel.NORMAL)
+    @Description("Проверка граничной длины пароля. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Step("Проверка граничной длины пароля")
     public void shouldValidatePasswordBoundaries(
             String password,
             int expectedLength,
@@ -217,7 +262,13 @@ public class RegistrationUiTest extends BaseUiTest {
         };
     }
 
-    @Test(dataProvider = "invalidEmails")
+    @Test(dataProvider = "invalidEmails", description = "UI: Отклонение некорректного формата email")
+    @Epic("Task Manager")
+    @Feature("Регистрация")
+    @Story("Отклонение некорректного формата email")
+    @Severity(SeverityLevel.NORMAL)
+    @Description("Отклонение некорректного формата email. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Step("Отклонение некорректного формата email")
     public void shouldRejectInvalidEmail(String email) {
 
         RegistrationPage registrationPage =
@@ -232,7 +283,13 @@ public class RegistrationUiTest extends BaseUiTest {
         );
     }
 
-    @Test
+    @Test(description = "UI: Принятие корректного формата email")
+    @Epic("Task Manager")
+    @Feature("Регистрация")
+    @Story("Принятие корректного формата email")
+    @Severity(SeverityLevel.NORMAL)
+    @Description("Принятие корректного формата email. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Step("Принятие корректного формата email")
     public void shouldAcceptValidEmail() {
 
         RegistrationPage registrationPage =
@@ -247,7 +304,13 @@ public class RegistrationUiTest extends BaseUiTest {
         );
     }
 
-    @Test
+    @Test(description = "UI: Регистрация и проверка пользователя в БД")
+    @Epic("Task Manager")
+    @Feature("Регистрация")
+    @Story("Регистрация и проверка пользователя в БД")
+    @Severity(SeverityLevel.CRITICAL)
+    @Description("Регистрация и проверка пользователя в БД. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Step("Регистрация и проверка пользователя в БД")
     public void shouldRegisterNewUserSuccessfully() throws Exception {
 
         RegistrationRequest user = TestDataGenerator.newUser();
@@ -304,7 +367,13 @@ public class RegistrationUiTest extends BaseUiTest {
         };
     }
 
-    @Test(dataProvider = "duplicateRegistrationData")
+    @Test(dataProvider = "duplicateRegistrationData", description = "UI: Отклонение повторной регистрации")
+    @Epic("Task Manager")
+    @Feature("Регистрация")
+    @Story("Отклонение повторной регистрации")
+    @Severity(SeverityLevel.NORMAL)
+    @Description("Отклонение повторной регистрации. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Step("Отклонение повторной регистрации")
     public void shouldRejectDuplicateRegistration(
             boolean duplicateUsername,
             boolean duplicateEmail,
@@ -363,7 +432,13 @@ public class RegistrationUiTest extends BaseUiTest {
         );
     }
 
-    @Test
+    @Test(description = "UI: Вход после регистрации нового пользователя")
+    @Epic("Task Manager")
+    @Feature("Регистрация")
+    @Story("Вход после регистрации нового пользователя")
+    @Severity(SeverityLevel.CRITICAL)
+    @Description("Вход после регистрации нового пользователя. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Step("Вход после регистрации нового пользователя")
     public void shouldLoginAfterRegistration() throws Exception {
 
         RegistrationRequest user = TestDataGenerator.newUser();

@@ -23,6 +23,7 @@
         <rest-assured.version>5.5.0</rest-assured.version>
         <testng.version>7.10.2</testng.version>
         <allure.version>2.29.1</allure.version>
+        <aspectj.version>1.9.22.1</aspectj.version>
         <surefire.version>3.5.2</surefire.version>
         <compiler.version>3.13.0</compiler.version>
     </properties>
@@ -56,6 +57,35 @@
     </dependencyManagement>
 
     <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <!-- TestNG's default reporters serialize DataProvider arguments verbatim. -->
+                    <properties>
+                        <property>
+                            <name>usedefaultlisteners</name>
+                            <value>false</value>
+                        </property>
+                    </properties>
+                    <disableXmlReport>true</disableXmlReport>
+                    <useFile>false</useFile>
+                    <redirectTestOutputToFile>false</redirectTestOutputToFile>
+                    <argLine>-javaagent:"${settings.localRepository}/org/aspectj/aspectjweaver/${aspectj.version}/aspectjweaver-${aspectj.version}.jar"</argLine>
+                    <systemPropertyVariables>
+                        <allure.results.directory>${project.build.directory}/allure-results</allure.results.directory>
+                    </systemPropertyVariables>
+                </configuration>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.aspectj</groupId>
+                        <artifactId>aspectjweaver</artifactId>
+                        <version>${aspectj.version}</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
+        </plugins>
         <pluginManagement>
             <plugins>
                 <plugin>

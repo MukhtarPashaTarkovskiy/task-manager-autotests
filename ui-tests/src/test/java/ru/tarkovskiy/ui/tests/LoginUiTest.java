@@ -14,10 +14,10 @@ import ru.tarkovskiy.ui.base.BaseUiTest;
 import ru.tarkovskiy.ui.enums.LoginElement;
 import org.testng.annotations.DataProvider;
 import ru.tarkovskiy.ui.pages.LoginPage;
-import static org.testng.Assert.assertNotNull;
-import static org.testng.Assert.assertFalse;
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertTrue;
+import static ru.tarkovskiy.reporting.Checks.assertNotNull;
+import static ru.tarkovskiy.reporting.Checks.assertFalse;
+import static ru.tarkovskiy.reporting.Checks.assertEquals;
+import static ru.tarkovskiy.reporting.Checks.assertTrue;
 import ru.tarkovskiy.ui.utils.TestData;
 
 public class LoginUiTest extends BaseUiTest {
@@ -27,7 +27,7 @@ public class LoginUiTest extends BaseUiTest {
     @Feature("Авторизация")
     @Story("Открытие страницы входа")
     @Severity(SeverityLevel.NORMAL)
-    @Description("Открытие страницы входа. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Description("Открыть форму входа и проверить точный маршрут /login. Неверный переход должен фиксироваться как ошибка сценария.")
     @Step("Открытие страницы входа")
     public void shouldOpenLoginPage() {
         loginPage.open(BASE_URL);
@@ -54,7 +54,7 @@ public class LoginUiTest extends BaseUiTest {
     @Feature("Авторизация")
     @Story("Отображение элементов формы входа")
     @Severity(SeverityLevel.NORMAL)
-    @Description("Отображение элементов формы входа. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Description("Проверить видимость каждого элемента формы входа из DataProvider. В отчёте варианты отделены безопасным номером без значений учётных данных.")
     @Step("Отображение элементов формы входа")
     public void shouldDisplayLoginElement(LoginElement element) {
 
@@ -72,7 +72,7 @@ public class LoginUiTest extends BaseUiTest {
     @Feature("Авторизация")
     @Story("Вход и переход к списку задач")
     @Severity(SeverityLevel.CRITICAL)
-    @Description("Вход и переход к списку задач. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Description("Войти постоянным тестовым пользователем и дождаться завершения авторизации. Ожидается точный переход на /tasks; итоговая структура страницы сохраняется с полным маскированием данных.")
     @Step("Вход и переход к списку задач")
     public void shouldLoginSuccessfully() {
 
@@ -119,7 +119,7 @@ public class LoginUiTest extends BaseUiTest {
     @Feature("Авторизация")
     @Story("Отклонение неверных учётных данных")
     @Severity(SeverityLevel.NORMAL)
-    @Description("Отклонение неверных учётных данных. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Description("Проверить варианты неверных учётных данных. Ожидаются маршрут /login?error и сообщение об ошибке авторизации; вход не должен состояться.")
     @Step("Отклонение неверных учётных данных")
     public void shouldRejectInvalidCredentials(
             String username,
@@ -158,7 +158,7 @@ public class LoginUiTest extends BaseUiTest {
     @Feature("Авторизация")
     @Story("Проверка обязательных полей входа")
     @Severity(SeverityLevel.NORMAL)
-    @Description("Проверка обязательных полей входа. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Description("Оставить пустым логин, пароль или оба поля. Браузер должен отметить обязательное поле через validity.valueMissing и сохранить маршрут /login.")
     @Step("Проверка обязательных полей входа")
     public void shouldRejectEmptyCredentials(
             String username,

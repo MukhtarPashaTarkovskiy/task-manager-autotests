@@ -23,10 +23,16 @@ public final class SafeAllureHttpFilter implements Filter {
             throw new IllegalStateException("HTTP request refused: unapproved TEST route");
         }
         long started = System.nanoTime();
-        Response result = context.next(request, response);
+        Response result;
+        try { result = Allure.step(request.getMethod() + " " + path, () -> context.next(request, response)); }
+        catch (RuntimeException failure) {
+            Allure.addAttachment("Ошибка HTTP-запроса", "text/plain", request.getMethod() + " " + path + "\nТип: " + failure.getClass().getName(), ".txt");
+            throw failure;
+        }
+        ApiChecks.actual(result.statusCode());
         String summary = request.getMethod() + " " + path + "\nHTTP status: " + result.statusCode()
                 + "\nDuration ms: " + ((System.nanoTime() - started) / 1_000_000);
-        Allure.addAttachment("HTTP operation and result", "text/plain", summary, ".txt");
+        Allure.addAttachment("HTTP: метод, путь и фактический результат", "text/plain", summary, ".txt");
         return result;
     }
 }

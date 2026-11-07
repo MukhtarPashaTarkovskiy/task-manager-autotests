@@ -16,7 +16,7 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.Statement;
 
-import static org.testng.Assert.assertEquals;
+import static ru.tarkovskiy.reporting.Checks.assertEquals;
 
 public class DbConnectionTest {
 
@@ -25,7 +25,7 @@ public class DbConnectionTest {
     @Feature("Инфраструктура")
     @Story("Подключение к тестовой базе данных")
     @Severity(SeverityLevel.NORMAL)
-    @Description("Подключение к тестовой базе данных. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Description("Проверить доступность разрешённой TEST PostgreSQL: запрос SELECT current_database() должен вернуть task_manager_test. Соединение закрывается автоматически; реквизиты подключения в отчёт не записываются.")
     @Step("Подключение к тестовой базе данных")
     public void shouldConnectToTestDatabase() throws Exception {
 

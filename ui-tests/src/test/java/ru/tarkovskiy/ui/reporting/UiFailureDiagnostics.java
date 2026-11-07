@@ -18,7 +18,7 @@ public final class UiFailureDiagnostics {
     public static final String ATTACHED = UiFailureDiagnostics.class.getName() + ".attached";
     private UiFailureDiagnostics() { }
 
-    public static void attach(WebDriver driver, By locator, WebDriverException failure) {
+    public static void attach(WebDriver driver, By locator, Throwable failure) {
         try {
             String report = "UI_FAILURE_DIAGNOSTICS\n"
                     + "url=" + read(() -> safeUrl(driver.getCurrentUrl())) + "\n"
@@ -29,6 +29,9 @@ public final class UiFailureDiagnostics {
                     + "title=" + read(() -> safeTitle(driver.getTitle())) + "\n"
                     + "domElements=" + read(() -> count(((JavascriptExecutor) driver)
                         .executeScript("return document.getElementsByTagName('*').length"))) + "\n"
+                    + "browser=" + read(() -> driver instanceof org.openqa.selenium.HasCapabilities caps
+                        ? caps.getCapabilities().getBrowserName().replaceAll("[^a-zA-Z0-9 ._-]", "_") + " "
+                          + caps.getCapabilities().getBrowserVersion().replaceAll("[^a-zA-Z0-9 ._-]", "_") : "[UNAVAILABLE]") + "\n"
                     + "locatorKnown=" + (locator != null) + "\n"
                     + "matchingElements=" + (locator == null ? "[UNKNOWN_LOCATOR]"
                         : read(() -> Integer.toString(driver.findElements(locator).size()))) + "\n"
@@ -77,7 +80,7 @@ public final class UiFailureDiagnostics {
                 ? Long.toString(number.longValue()) : "[UNAVAILABLE]";
     }
 
-    private static String safeMessage(WebDriverException failure) {
+    private static String safeMessage(Throwable failure) {
         // Selenium messages may contain capabilities, URLs, tokens and arbitrary page text.
         // Keep recognized literal timeout text; never emit the raw message as a fallback.
         String message = failure.getMessage();

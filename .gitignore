@@ -40,3 +40,13 @@ Thumbs.db
 # Maven build
 target/
 **/target/
+# Immutable reporting runs (outside Maven target)
+/test-runs/
+/.allure/
+/.allure-history/
+
+__pycache__/
+*.pyc
+
+# Atomic machine-local Allure selection, contains no credentials
+/.mvn/maven.config

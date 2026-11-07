@@ -29,13 +29,13 @@ import ru.tarkovskiy.ui.models.RegistrationRequest;
 import ru.tarkovskiy.ui.utils.TestDataGenerator;
 import ru.tarkovskiy.ui.db.UserDbHelper;
 
-import static org.testng.Assert.*;
+import static ru.tarkovskiy.reporting.Checks.*;
 
 public class RegistrationUiTest extends BaseUiTest {
 
     private final TestDataCleanup cleanup = new TestDataCleanup();
 
-    @AfterMethod(alwaysRun = true)
+    @AfterMethod(alwaysRun = true, description = "Завершение: очистка ресурсов и тестовых данных")
     public void cleanupTestData() throws Exception {
         cleanup.cleanup();
     }
@@ -45,7 +45,7 @@ public class RegistrationUiTest extends BaseUiTest {
     @Feature("Регистрация")
     @Story("Переход к регистрации")
     @Severity(SeverityLevel.NORMAL)
-    @Description("Переход к регистрации. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Description("Перейти по ссылке регистрации на форме входа. Ожидается точный маршрут /register.")
     @Step("Переход к регистрации")
     public void shouldNavigateToRegistrationPage() {
 
@@ -78,7 +78,7 @@ public class RegistrationUiTest extends BaseUiTest {
     @Feature("Регистрация")
     @Story("Отображение элементов регистрации")
     @Severity(SeverityLevel.NORMAL)
-    @Description("Отображение элементов регистрации. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Description("Проверить видимость каждого предусмотренного элемента формы регистрации: полей, кнопки, ссылки и заголовка.")
     @Step("Отображение элементов регистрации")
     public void shouldDisplayRegistrationElement(
             RegistrationElement element
@@ -98,7 +98,7 @@ public class RegistrationUiTest extends BaseUiTest {
     @Feature("Регистрация")
     @Story("Переход к странице входа")
     @Severity(SeverityLevel.NORMAL)
-    @Description("Переход к странице входа. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Description("Нажать ссылку входа на форме регистрации. Ожидается точный маршрут /login.")
     @Step("Переход к странице входа")
     public void shouldNavigateToLoginPage() {
 
@@ -131,7 +131,7 @@ public class RegistrationUiTest extends BaseUiTest {
     @Feature("Регистрация")
     @Story("Проверка обязательных полей регистрации")
     @Severity(SeverityLevel.NORMAL)
-    @Description("Проверка обязательных полей регистрации. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Description("Поочерёдно оставить пустыми обязательные поля регистрации. Ожидаются validity.valueMissing у первого пустого поля и сохранение формы /register.")
     @Step("Проверка обязательных полей регистрации")
     public void shouldRejectEmptyRegistrationFields(
             String username,
@@ -185,7 +185,7 @@ public class RegistrationUiTest extends BaseUiTest {
     @Feature("Регистрация")
     @Story("Проверка граничной длины логина")
     @Severity(SeverityLevel.NORMAL)
-    @Description("Проверка граничной длины логина. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Description("Проверить минимальную и максимальную длину логина в браузере. Сопоставить фактическую длину после ввода и признак tooShort с ожидаемыми значениями варианта.")
     @Step("Проверка граничной длины логина")
     public void shouldValidateUsernameBoundaries(
             String username,
@@ -226,7 +226,7 @@ public class RegistrationUiTest extends BaseUiTest {
     @Feature("Регистрация")
     @Story("Проверка граничной длины пароля")
     @Severity(SeverityLevel.NORMAL)
-    @Description("Проверка граничной длины пароля. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Description("Проверить ограничение длины пароля и признак tooShort на граничных значениях. В отчёте сохраняются только длины и результаты проверок, сам пароль скрывается.")
     @Step("Проверка граничной длины пароля")
     public void shouldValidatePasswordBoundaries(
             String password,
@@ -267,7 +267,7 @@ public class RegistrationUiTest extends BaseUiTest {
     @Feature("Регистрация")
     @Story("Отклонение некорректного формата email")
     @Severity(SeverityLevel.NORMAL)
-    @Description("Отклонение некорректного формата email. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Description("Ввести каждый некорректный email из DataProvider. Ожидается установленный браузером признак validity.typeMismatch.")
     @Step("Отклонение некорректного формата email")
     public void shouldRejectInvalidEmail(String email) {
 
@@ -288,7 +288,7 @@ public class RegistrationUiTest extends BaseUiTest {
     @Feature("Регистрация")
     @Story("Принятие корректного формата email")
     @Severity(SeverityLevel.NORMAL)
-    @Description("Принятие корректного формата email. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Description("Ввести корректный email и проверить отсутствие браузерной ошибки формата. Значение адреса в отчёте скрывается.")
     @Step("Принятие корректного формата email")
     public void shouldAcceptValidEmail() {
 
@@ -309,7 +309,7 @@ public class RegistrationUiTest extends BaseUiTest {
     @Feature("Регистрация")
     @Story("Регистрация и проверка пользователя в БД")
     @Severity(SeverityLevel.CRITICAL)
-    @Description("Регистрация и проверка пользователя в БД. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Description("Зарегистрировать уникального пользователя через UI. Дождаться перехода на /login и подтвердить создание пользователя в TEST PostgreSQL; данные зарегистрированы для очистки заранее.")
     @Step("Регистрация и проверка пользователя в БД")
     public void shouldRegisterNewUserSuccessfully() throws Exception {
 
@@ -372,7 +372,7 @@ public class RegistrationUiTest extends BaseUiTest {
     @Feature("Регистрация")
     @Story("Отклонение повторной регистрации")
     @Severity(SeverityLevel.NORMAL)
-    @Description("Отклонение повторной регистрации. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Description("Попытаться зарегистрировать занятый логин и/или email. Ожидаются соответствующее сообщение, сохранение /register, неизменное количество пользователей и отсутствие нового пользователя в БД.")
     @Step("Отклонение повторной регистрации")
     public void shouldRejectDuplicateRegistration(
             boolean duplicateUsername,
@@ -437,7 +437,7 @@ public class RegistrationUiTest extends BaseUiTest {
     @Feature("Регистрация")
     @Story("Вход после регистрации нового пользователя")
     @Severity(SeverityLevel.CRITICAL)
-    @Description("Вход после регистрации нового пользователя. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Description("Зарегистрировать уникального пользователя, подтвердить запись в БД и выполнить вход его данными. Ожидается переход на /tasks; пользователь удаляется отдельным этапом очистки.")
     @Step("Вход после регистрации нового пользователя")
     public void shouldLoginAfterRegistration() throws Exception {
 

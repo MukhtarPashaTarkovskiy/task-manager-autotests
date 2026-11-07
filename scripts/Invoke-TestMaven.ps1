@@ -7,6 +7,9 @@ param(
     [ValidateSet('api-tests','ui-tests')][string] $Module,
     [Parameter(Mandatory=$true, ParameterSetName='Test')]
     [ValidatePattern('\A[A-Za-z_][A-Za-z0-9_.]*(#[A-Za-z_][A-Za-z0-9_]*)?\z')][string] $Test,
+    [Parameter(Mandatory=$true, ParameterSetName='All')][switch] $All,
+    [ValidateSet('Smoke','Regression','All')][string] $Kind = 'All',
+    [ValidatePattern('^[A-Za-z0-9][A-Za-z0-9_-]{0,119}$')][string] $RunId,
     [Parameter(Mandatory=$true, ParameterSetName='SelfTest')][switch] $SelfTest,
     [switch] $FromEnvironment,
     [switch] $Headless
@@ -112,26 +115,22 @@ try {
             $Module = if ($Suite.StartsWith('Api')) { 'api-tests' } else { 'ui-tests' }
             $suiteFile = if ($Suite.EndsWith('Smoke')) { 'smoke-tests.xml' } else { 'regression-tests.xml' }
             $selection = '-Dsurefire.suiteXmlFiles=' + $suiteFile
+        } elseif ($selectionMode -eq 'All') {
+            $selection = if ($Kind -eq 'All') { '' } else { '-Dsurefire.suiteXmlFiles=' + $Kind.ToLowerInvariant() + '-tests.xml' }
         } else { $selection = '-Dtest=' + $Test }
+        $moduleSelection = if ($selectionMode -eq 'All') { '-fae' } else { '-pl ' + $Module + ' -am' }
+        $runSuite = if ($selectionMode -eq 'Suite') { if ($Suite.EndsWith('Smoke')) { 'Smoke' } else { 'Regression' } } elseif ($selectionMode -eq 'Test') { 'Selected' } else { $Kind }
+        if (-not $RunId) { $RunId = [DateTime]::UtcNow.ToString('yyyyMMddTHHmmssfff') + '-' + [Guid]::NewGuid().ToString('N') }
+        $workspaceRoot = [IO.Path]::GetFullPath((Split-Path -Parent $PSScriptRoot))
+        $runPath = Join-Path $workspaceRoot "test-runs/$RunId"
+        # Existing module/suite partitions are rejected by the Java agent; never moved or overwritten.
+        Write-Host "Run ID: $RunId"
+
         $maven = (Get-Command mvn.cmd -CommandType Application).Source
         if ($maven -match '[%&|<>^!\r\n"]') { throw 'Unsafe Maven executable path.' }
         # Keep console diagnostics, avoid normal Surefire XML/text copies of test parameters.
-        $command = 'call "' + $maven + '" -B -ntp -pl ' + $Module + ' ' + $selection +
+        $command = 'call "' + $maven + '" -B -ntp ' + $moduleSelection + ' ' + $selection +
             ' -DdisableXmlReport=true -Dsurefire.useFile=false -Dmaven.test.redirectTestOutputToFile=false test'
-    }
-    if (-not $SelfTest) {
-        # Isolate every invocation; preserve old generated files instead of deleting them.
-        $workspaceRoot = [IO.Path]::GetFullPath((Split-Path -Parent $PSScriptRoot))
-        $resultsPath = Join-Path $workspaceRoot "$Module/target/allure-results"
-        $archiveRoot = Join-Path $workspaceRoot 'target/runs/archive'
-        $runStamp = [DateTime]::UtcNow.ToString('yyyyMMddTHHmmssfff') + '-' + [Guid]::NewGuid().ToString('N')
-        foreach ($candidate in @($resultsPath,$archiveRoot)) {
-            if (-not [IO.Path]::GetFullPath($candidate).StartsWith($workspaceRoot + '\', [StringComparison]::OrdinalIgnoreCase)) { throw 'Unsafe result path.' }
-        }
-        New-Item -ItemType Directory -Force -Path $archiveRoot | Out-Null
-        if (Test-Path -LiteralPath $resultsPath) {
-            Move-Item -LiteralPath $resultsPath -Destination (Join-Path $archiveRoot "$runStamp-$Module")
-        }
     }
     $startInfo = New-Object Diagnostics.ProcessStartInfo
     $startInfo.FileName = Join-Path $env:SystemRoot 'System32/cmd.exe'
@@ -147,6 +146,10 @@ try {
     }
     $startInfo.EnvironmentVariables['MAVEN_SKIP_RC'] = '1'
     foreach ($name in $plain.Keys) { $startInfo.EnvironmentVariables[$name] = $plain[$name] }
+    if (-not $SelfTest) {
+        $startInfo.EnvironmentVariables['TM_RUN_ID'] = $RunId
+        $startInfo.EnvironmentVariables['TM_SUITE'] = $runSuite
+    }
     $startInfo.EnvironmentVariables['TEST_BASE_URL'] = 'https://task-manager-test-588r.onrender.com'
     $startInfo.EnvironmentVariables['HEADLESS'] = $Headless.IsPresent.ToString().ToLowerInvariant()
     $job = New-Object TestMavenJob
@@ -183,21 +186,10 @@ try {
         Write-Host (Protect-TestOutput ($stdout.GetAwaiter().GetResult()) $plain)
         Write-Host (Protect-TestOutput ($stderr.GetAwaiter().GetResult()) $plain)
         Write-Host "Maven exit code: $exitCode"
-        # Audit every report format, including TestNG/Surefire siblings of allure-results.
-        & (Join-Path $PSScriptRoot 'Test-ReportSecrets.ps1') -Paths @((Join-Path $workspaceRoot "$Module/target")) -FromEnvironment:$FromEnvironment
+        & (Join-Path $PSScriptRoot 'Test-ReportSecrets.ps1') -Paths @($runPath) -FromEnvironment:$FromEnvironment
         if ($LASTEXITCODE -ne 0) { throw 'Artifact audit failed.' }
-        if (Test-Path -LiteralPath $resultsPath) {
-            if ($selectionMode -eq 'Suite') {
-                $snapshot = Join-Path $workspaceRoot "target/runs/$Suite"
-                if (-not [IO.Path]::GetFullPath($snapshot).StartsWith($workspaceRoot + '\', [StringComparison]::OrdinalIgnoreCase)) { throw 'Unsafe snapshot path.' }
-                if (Test-Path -LiteralPath $snapshot) {
-                    Move-Item -LiteralPath $snapshot -Destination (Join-Path $archiveRoot "$runStamp-$Suite")
-                }
-                New-Item -ItemType Directory -Path $snapshot | Out-Null
-                Copy-Item -LiteralPath $resultsPath -Destination (Join-Path $snapshot 'allure-results') -Recurse
-                Write-Host "Audited suite results saved: target/runs/$Suite/allure-results"
-            }
-        }
+        Write-Host "Saved results: test-runs/$RunId"
+
     }
 } catch {
     Write-Host 'FAILED: storage, endpoint validation or process execution. Secret-bearing exception details suppressed.'

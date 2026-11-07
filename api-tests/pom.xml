@@ -11,6 +11,17 @@
 
     <artifactId>api-tests</artifactId>
 
+    <properties>
+        <allure.latest.api.input>${maven.multiModuleProjectDirectory}/test-runs/NO_COMPLETED_API_RUN</allure.latest.api.input>
+        <allure.latest.api.output>${maven.multiModuleProjectDirectory}/test-runs/NO_COMPLETED_API_RUN/view</allure.latest.api.output>
+        <allure.latest.api.runId>No completed api run</allure.latest.api.runId>
+        <allure.latest.api.order>0</allure.latest.api.order>
+        <allure.maven.input>${allure.latest.api.input}</allure.maven.input>
+        <allure.maven.output>${allure.latest.api.output}</allure.maven.output>
+        <allure.maven.runId>${allure.latest.api.runId}</allure.maven.runId>
+        <allure.maven.buildOrder>${allure.latest.api.order}</allure.maven.buildOrder>
+    </properties>
+
     <dependencies>
         <!-- REST Assured для API-тестирования -->
         <dependency>
@@ -64,4 +75,12 @@
 
     </dependencies>
 
+    <build><plugins><plugin>
+        <groupId>org.codehaus.mojo</groupId><artifactId>build-helper-maven-plugin</artifactId><version>3.3.0</version>
+        <executions><execution><id>shared-reporting</id><phase>generate-test-sources</phase>
+            <goals><goal>add-test-source</goal></goals><configuration><sources>
+                <source>${project.basedir}/../reporting/src/main/java</source>
+            </sources></configuration>
+        </execution></executions>
+    </plugin></plugins></build>
 </project>

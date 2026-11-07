@@ -19,13 +19,13 @@ import ru.tarkovskiy.api.db.UserDbHelper;
 import ru.tarkovskiy.api.models.RegistrationRequest;
 import ru.tarkovskiy.api.utils.TestDataGenerator;
 
-import static io.restassured.module.jsv.JsonSchemaValidator.matchesJsonSchemaInClasspath;
+import static ru.tarkovskiy.api.reporting.ApiChecks.matchesJsonSchemaInClasspath;
 import static org.hamcrest.Matchers.hasItem;
 
 import java.sql.SQLException;
 
 import static org.hamcrest.Matchers.equalTo;
-import static org.testng.Assert.*;
+import static ru.tarkovskiy.reporting.Checks.*;
 import static ru.tarkovskiy.api.config.SchemaPaths.REGISTRATION_CONFLICT_ERROR;
 import static ru.tarkovskiy.api.config.SchemaPaths.REGISTRATION_VALIDATION_ERROR;
 
@@ -36,7 +36,7 @@ public class RegistrationTest extends BaseApiTest {
     @Feature("Регистрация")
     @Story("Успешная регистрация пользователя")
     @Severity(SeverityLevel.CRITICAL)
-    @Description("Успешная регистрация пользователя. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Description("Зарегистрировать уникального пользователя. Ожидаются HTTP 201, сообщение об успешной регистрации и наличие пользователя в TEST PostgreSQL. Пользователь заранее регистрируется для последующей очистки.")
     @Step("Успешная регистрация пользователя")
     public void shouldRegisterUserSuccessfully() throws Exception {
 
@@ -47,7 +47,7 @@ public class RegistrationTest extends BaseApiTest {
         Response response = new AuthClient().register(user);
 
         response.then()
-                .statusCode(201)
+                .statusCode(ru.tarkovskiy.api.reporting.ApiChecks.expected(201))
                 .body(equalTo("Пользователь зарегистрирован"));
 
         assertTrue(
@@ -61,7 +61,7 @@ public class RegistrationTest extends BaseApiTest {
     @Feature("Регистрация")
     @Story("Отклонение занятого логина")
     @Severity(SeverityLevel.NORMAL)
-    @Description("Отклонение занятого логина. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Description("Создать первого пользователя и повторить регистрацию с тем же логином и другим email. Ожидаются HTTP 409, соответствие схеме ошибки и сообщение о занятом логине; в БД должен остаться только первый пользователь.")
     @Step("Отклонение занятого логина")
     public void shouldNotRegisterUserWithDuplicateUsername() throws SQLException {
 
@@ -90,7 +90,7 @@ public class RegistrationTest extends BaseApiTest {
         Response secondResponse = authClient.register(secondUser);
 
         secondResponse.then()
-                .statusCode(409)
+                .statusCode(ru.tarkovskiy.api.reporting.ApiChecks.expected(409))
                 .body(matchesJsonSchemaInClasspath(
                         REGISTRATION_CONFLICT_ERROR))
                 .body("error", equalTo("Логин уже занят"));
@@ -111,7 +111,7 @@ public class RegistrationTest extends BaseApiTest {
     @Feature("Регистрация")
     @Story("Отклонение занятого email")
     @Severity(SeverityLevel.NORMAL)
-    @Description("Отклонение занятого email. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Description("Создать первого пользователя и повторить регистрацию с тем же email и другим логином. Ожидаются HTTP 409 и соответствие схеме конфликта; второй пользователь не должен появиться в БД.")
     @Step("Отклонение занятого email")
     public void shouldNotRegisterUserWithDuplicateEmail() throws SQLException {
 
@@ -132,13 +132,13 @@ public class RegistrationTest extends BaseApiTest {
         Response firstResponse = authClient.register(firstUser);
 
         firstResponse.then()
-                .statusCode(201)
+                .statusCode(ru.tarkovskiy.api.reporting.ApiChecks.expected(201))
                 .body(equalTo("Пользователь зарегистрирован"));
 
         Response secondResponse = authClient.register(secondUser);
 
         secondResponse.then()
-                .statusCode(409)
+                .statusCode(ru.tarkovskiy.api.reporting.ApiChecks.expected(409))
                 .body(matchesJsonSchemaInClasspath(
                         REGISTRATION_CONFLICT_ERROR))
                 .body("error", equalTo("Email уже зарегистрирован"));
@@ -168,7 +168,7 @@ public class RegistrationTest extends BaseApiTest {
     @Feature("Регистрация")
     @Story("Проверка некорректного email")
     @Severity(SeverityLevel.NORMAL)
-    @Description("Проверка некорректного email. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Description("Передать каждый некорректный формат email из DataProvider. Ожидаются HTTP 400, соответствие схеме валидации и ошибка поля email; значения пользователя в отчёт не включаются.")
     @Step("Проверка некорректного email")
     public void shouldNotRegisterUserWithInvalidEmail(String invalidEmail)
             throws SQLException {
@@ -185,7 +185,7 @@ public class RegistrationTest extends BaseApiTest {
         Response response = new AuthClient().register(user);
 
         response.then()
-                .statusCode(400)
+                .statusCode(ru.tarkovskiy.api.reporting.ApiChecks.expected(400))
                 .body(
                         matchesJsonSchemaInClasspath(
                                 REGISTRATION_VALIDATION_ERROR
@@ -209,7 +209,7 @@ public class RegistrationTest extends BaseApiTest {
     @Feature("Регистрация")
     @Story("Проверка обязательных полей регистрации")
     @Severity(SeverityLevel.NORMAL)
-    @Description("Проверка обязательных полей регистрации. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Description("Поочерёдно оставить пустым обязательное поле регистрации. Ожидаются HTTP 400, корректная схема ошибки и сообщение именно для выбранного поля.")
     @Step("Проверка обязательных полей регистрации")
     public void shouldNotRegisterUserWithEmptyFields(
             String emptyValue,
@@ -234,7 +234,7 @@ public class RegistrationTest extends BaseApiTest {
         Response response = new AuthClient().register(user);
 
         response.then()
-                .statusCode(400)
+                .statusCode(ru.tarkovskiy.api.reporting.ApiChecks.expected(400))
                 .body(
                         matchesJsonSchemaInClasspath(
                                 REGISTRATION_VALIDATION_ERROR
@@ -261,7 +261,7 @@ public class RegistrationTest extends BaseApiTest {
     @Feature("Регистрация")
     @Story("Проверка граничной длины логина")
     @Severity(SeverityLevel.NORMAL)
-    @Description("Проверка граничной длины логина. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Description("Проверить значения длины логина по обе стороны допустимых границ. Для допустимых вариантов ожидаются HTTP 201 и сохранение пользователя; для недопустимых — HTTP 400, схема валидации и отсутствие регистрации.")
     @Step("Проверка граничной длины логина")
     public void shouldValidateUsernameBoundaries(
             String username,
@@ -280,7 +280,7 @@ public class RegistrationTest extends BaseApiTest {
         Response response = new AuthClient().register(user);
 
         response.then()
-                .statusCode(expectedStatus);
+                .statusCode(ru.tarkovskiy.api.reporting.ApiChecks.expected(expectedStatus));
         if (expectedStatus == 400) {
             response.then()
                     .body(
@@ -321,7 +321,7 @@ public class RegistrationTest extends BaseApiTest {
     @Feature("Регистрация")
     @Story("Проверка граничной длины пароля")
     @Severity(SeverityLevel.NORMAL)
-    @Description("Проверка граничной длины пароля. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Description("Проверить граничные длины пароля. Ожидаемый HTTP-статус определяется вариантом DataProvider; успешная регистрация и отказ проверяются по контракту и состоянию БД без записи самого пароля.")
     @Step("Проверка граничной длины пароля")
     public void shouldValidatePasswordBoundaries(
             String password,
@@ -340,7 +340,7 @@ public class RegistrationTest extends BaseApiTest {
         Response response = new AuthClient().register(user);
 
         response.then()
-                .statusCode(expectedStatus);
+                .statusCode(ru.tarkovskiy.api.reporting.ApiChecks.expected(expectedStatus));
 
         if (expectedStatus == 400) {
             response.then()

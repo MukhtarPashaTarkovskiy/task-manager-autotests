@@ -24,7 +24,7 @@ public class LoginTest extends BaseApiTest {
     @Feature("Авторизация")
     @Story("Вход с корректными учётными данными")
     @Severity(SeverityLevel.NORMAL)
-    @Description("Вход с корректными учётными данными. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Description("Выполнить вход с корректными данными постоянного тестового пользователя. Ожидаются HTTP 302 с переходом на /tasks и HTTP 200 при последующем получении задач в той же сессии.")
     @Step("Вход с корректными учётными данными")
     public void shouldLoginWithValidCredentials() {
 
@@ -44,14 +44,14 @@ public class LoginTest extends BaseApiTest {
 
         Allure.step("Проверить HTTP 302 и перенаправление на /tasks", () -> {
             response.then()
-                    .statusCode(302)
+                    .statusCode(ru.tarkovskiy.api.reporting.ApiChecks.expected(302))
                     .header("Location", containsString("/tasks"));
         });
 
         Allure.step("GET /api/tasks: проверить HTTP 200 после входа", () -> {
             authClient.getTasks()
                     .then()
-                    .statusCode(200);
+                    .statusCode(ru.tarkovskiy.api.reporting.ApiChecks.expected(200));
         });
     }
 
@@ -60,7 +60,7 @@ public class LoginTest extends BaseApiTest {
     @Feature("Авторизация")
     @Story("Отклонение неверного пароля")
     @Severity(SeverityLevel.NORMAL)
-    @Description("Отклонение неверного пароля. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Description("Попытаться войти с неверным паролем. Ожидается перенаправление на форму с ошибкой; запрос задач в этой сессии должен оставаться неавторизованным.")
     @Step("Отклонение неверного пароля")
     public void shouldNotLoginWithInvalidPassword() {
 
@@ -72,7 +72,7 @@ public class LoginTest extends BaseApiTest {
         );
 
         response.then()
-                .statusCode(302)
+                .statusCode(ru.tarkovskiy.api.reporting.ApiChecks.expected(302))
                 .header(
                         "Location",
                         containsString("/login?error")
@@ -81,7 +81,7 @@ public class LoginTest extends BaseApiTest {
         Response tasksResponse = authClient.getTasks();
 
         tasksResponse.then()
-                .statusCode(302)
+                .statusCode(ru.tarkovskiy.api.reporting.ApiChecks.expected(302))
                 .header(
                         "Location",
                         containsString("/login")
@@ -93,7 +93,7 @@ public class LoginTest extends BaseApiTest {
     @Feature("Авторизация")
     @Story("Отклонение несуществующего пользователя")
     @Severity(SeverityLevel.NORMAL)
-    @Description("Отклонение несуществующего пользователя. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Description("Проверить отказ во входе для отсутствующего пользователя: перенаправление на форму с ошибкой и отсутствие доступа к списку задач.")
     @Step("Отклонение несуществующего пользователя")
     public void shouldNotLoginWithNonExistingUsername() {
 
@@ -105,12 +105,12 @@ public class LoginTest extends BaseApiTest {
         );
 
         response.then()
-                .statusCode(302)
+                .statusCode(ru.tarkovskiy.api.reporting.ApiChecks.expected(302))
                 .header("Location", containsString("/login?error"));
 
         authClient.getTasks()
                 .then()
-                .statusCode(302)
+                .statusCode(ru.tarkovskiy.api.reporting.ApiChecks.expected(302))
                 .header("Location", containsString("/login"));
     }
 
@@ -119,7 +119,7 @@ public class LoginTest extends BaseApiTest {
     @Feature("Авторизация")
     @Story("Защита задач от неавторизованного доступа")
     @Severity(SeverityLevel.CRITICAL)
-    @Description("Защита задач от неавторизованного доступа. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Description("Запросить задачи без аутентификации. Ожидается HTTP 302 с перенаправлением на страницу входа, без предоставления данных задач.")
     @Step("Защита задач от неавторизованного доступа")
     public void shouldNotAccessTasksWithoutAuthentication() {
 
@@ -128,7 +128,7 @@ public class LoginTest extends BaseApiTest {
         Response response = authClient.getTasks();
 
         response.then()
-                .statusCode(302)
+                .statusCode(ru.tarkovskiy.api.reporting.ApiChecks.expected(302))
                 .header(
                         "Location",
                         containsString("/login")
@@ -140,7 +140,7 @@ public class LoginTest extends BaseApiTest {
     @Feature("Авторизация")
     @Story("Выход и прекращение доступа к задачам")
     @Severity(SeverityLevel.CRITICAL)
-    @Description("Выход и прекращение доступа к задачам. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Description("Подтвердить доступ к задачам после входа, выполнить выход и повторить запрос. До выхода ожидается HTTP 200, после выхода — перенаправление на авторизацию.")
     @Step("Выход и прекращение доступа к задачам")
     public void shouldLogoutSuccessfully() {
 
@@ -159,24 +159,24 @@ public class LoginTest extends BaseApiTest {
                         TestData.EXISTING_USERNAME,
                         password
                 ).then()
-                .statusCode(302)
+                .statusCode(ru.tarkovskiy.api.reporting.ApiChecks.expected(302))
                 .header("Location", containsString("/tasks"));
 
         // 2. Проверяем доступ до выхода
         authClient.getTasks()
                 .then()
-                .statusCode(200);
+                .statusCode(ru.tarkovskiy.api.reporting.ApiChecks.expected(200));
 
         // 3. Выходим из аккаунта
         authClient.logout()
                 .then()
-                .statusCode(302)
+                .statusCode(ru.tarkovskiy.api.reporting.ApiChecks.expected(302))
                 .header("Location", containsString("/login?logout"));
 
         // 4. Проверяем доступ после выхода
         authClient.getTasks()
                 .then()
-                .statusCode(302)
+                .statusCode(ru.tarkovskiy.api.reporting.ApiChecks.expected(302))
                 .header("Location", containsString("/login"));
     }
 }

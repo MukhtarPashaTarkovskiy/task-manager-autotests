@@ -24,7 +24,7 @@ import ru.tarkovskiy.ui.utils.TestData;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import org.testng.annotations.BeforeMethod;
-import static org.testng.Assert.*;
+import static ru.tarkovskiy.reporting.Checks.*;
 
 public class TaskUiTest extends BaseUiTest {
 
@@ -32,14 +32,14 @@ public class TaskUiTest extends BaseUiTest {
     private String boundaryTaskTitleForCleanup;
     private String boundaryTaskDescriptionForCleanup;
 
-    @BeforeMethod(alwaysRun = true)
+    @BeforeMethod(alwaysRun = true, description = "Подготовка: сброс состояния тестовых данных")
     public void resetCleanupData() {
         taskTitleForCleanup = null;
         boundaryTaskTitleForCleanup = null;
         boundaryTaskDescriptionForCleanup = null;
     }
 
-    @AfterMethod(alwaysRun = true)
+    @AfterMethod(alwaysRun = true, description = "Завершение: очистка ресурсов и тестовых данных")
     public void cleanupTestTask() throws SQLException {
 
         if (boundaryTaskTitleForCleanup != null
@@ -109,7 +109,7 @@ public class TaskUiTest extends BaseUiTest {
     @Feature("Управление задачами")
     @Story("Отображение страницы задач после входа")
     @Severity(SeverityLevel.NORMAL)
-    @Description("Отображение страницы задач после входа. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Description("После авторизации проверить маршрут /tasks, заголовок, ссылку создания задачи и наличие таблицы.")
     @Step("Отображение страницы задач после входа")
     public void shouldDisplayTasksPageAfterLogin() {
 
@@ -152,7 +152,7 @@ public class TaskUiTest extends BaseUiTest {
     @Feature("Управление задачами")
     @Story("Загрузка таблицы задач")
     @Severity(SeverityLevel.NORMAL)
-    @Description("Загрузка таблицы задач. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Description("После входа дождаться загрузки таблицы задач. Проверить предусмотренный страницей признак успешного получения данных API.")
     @Step("Загрузка таблицы задач")
     public void shouldLoadTasksTable() {
 
@@ -179,7 +179,7 @@ public class TaskUiTest extends BaseUiTest {
     @Feature("Управление задачами")
     @Story("Создание задачи с обязательными полями")
     @Severity(SeverityLevel.CRITICAL)
-    @Description("Создание задачи с обязательными полями. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Description("Создать задачу с обязательными полями через UI. Проверить запись в PostgreSQL, название, описание и значения по умолчанию: TODO, LOW, отсутствие срока.")
     @Step("Создание задачи с обязательными полями")
     public void shouldCreateTaskSuccessfully() throws SQLException {
 
@@ -235,7 +235,7 @@ public class TaskUiTest extends BaseUiTest {
     @Feature("Управление задачами")
     @Story("Создание задачи со всеми полями")
     @Severity(SeverityLevel.NORMAL)
-    @Description("Создание задачи со всеми полями. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Description("Создать задачу с описанием, выбранными статусом, приоритетом и сроком. Все переданные поля должны сохраниться в PostgreSQL.")
     @Step("Создание задачи со всеми полями")
     public void shouldCreateTaskWithAllFields() throws SQLException {
 
@@ -287,7 +287,7 @@ public class TaskUiTest extends BaseUiTest {
     @Feature("Управление задачами")
     @Story("Создание задачи с вариантами статуса приоритета и срока")
     @Severity(SeverityLevel.NORMAL)
-    @Description("Создание задачи с вариантами статуса приоритета и срока. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Description("Для каждого варианта статуса, приоритета и срока создать задачу через UI. Сопоставить сохранённые поля PostgreSQL с ожидаемыми значениями набора.")
     @Step("Создание задачи с вариантами статуса приоритета и срока")
     public void shouldCreateTaskWithDifferentData(
             String status,
@@ -336,7 +336,7 @@ public class TaskUiTest extends BaseUiTest {
     @Feature("Управление задачами")
     @Story("Отклонение пустого названия задачи")
     @Severity(SeverityLevel.NORMAL)
-    @Description("Отклонение пустого названия задачи. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Description("Отправить форму задачи без названия. Ожидаются сообщения об обязательности и длине названия; пользователь остаётся на /tasks/new.")
     @Step("Отклонение пустого названия задачи")
     public void shouldNotCreateTaskWithEmptyTitle() {
 
@@ -384,7 +384,7 @@ public class TaskUiTest extends BaseUiTest {
     @Feature("Управление задачами")
     @Story("Отклонение слишком короткого названия задачи")
     @Severity(SeverityLevel.NORMAL)
-    @Description("Отклонение слишком короткого названия задачи. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Description("Отправить название короче допустимой длины. Ожидается сообщение об ограничении 3–100 символов и сохранение формы создания.")
     @Step("Отклонение слишком короткого названия задачи")
     public void shouldRejectTooShortTaskTitle(String title) {
 
@@ -433,7 +433,7 @@ public class TaskUiTest extends BaseUiTest {
     @Feature("Управление задачами")
     @Story("Допустимая длина названия задачи")
     @Severity(SeverityLevel.NORMAL)
-    @Description("Допустимая длина названия задачи. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Description("Создать задачи с названиями длиной 3, 4, 99 и 100 символов. Найти каждую запись по защищённым признакам граничного теста в PostgreSQL.")
     @Step("Допустимая длина названия задачи")
     public void shouldCreateTaskWithValidTitleLength(int length)
             throws SQLException {
@@ -475,7 +475,7 @@ public class TaskUiTest extends BaseUiTest {
     @Feature("Управление задачами")
     @Story("Ограничение ввода названия задачи")
     @Severity(SeverityLevel.NORMAL)
-    @Description("Ограничение ввода названия задачи. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Description("Ввести 101 символ в название. Браузер должен сохранить ровно первые 100 символов без искажения содержимого.")
     @Step("Ограничение ввода названия задачи")
     public void shouldLimitTaskTitleTo100Characters() {
 
@@ -524,7 +524,7 @@ public class TaskUiTest extends BaseUiTest {
     @Feature("Управление задачами")
     @Story("Граничная длина описания задачи")
     @Severity(SeverityLevel.NORMAL)
-    @Description("Граничная длина описания задачи. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Description("Проверить длины описания около границ 0 и 1000 символов. После ввода ожидается ограничение до 1000; созданная задача должна сохранить фактическое значение поля в PostgreSQL.")
     @Step("Граничная длина описания задачи")
     public void shouldHandleDescriptionBoundaryValues(int length)
             throws SQLException {
@@ -578,7 +578,7 @@ public class TaskUiTest extends BaseUiTest {
     @Feature("Управление задачами")
     @Story("Редактирование задачи и проверка БД")
     @Severity(SeverityLevel.CRITICAL)
-    @Description("Редактирование задачи и проверка БД. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Description("Создать задачу, затем изменить описание, статус и приоритет через форму редактирования. После сохранения PostgreSQL должна содержать новые значения.")
     @Step("Редактирование задачи и проверка БД")
     public void shouldEditTaskSuccessfully() throws SQLException {
 
@@ -628,7 +628,7 @@ public class TaskUiTest extends BaseUiTest {
     @Feature("Управление задачами")
     @Story("Удаление задачи и проверка отсутствия в БД")
     @Severity(SeverityLevel.CRITICAL)
-    @Description("Удаление задачи и проверка отсутствия в БД. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Description("Создать задачу через UI, подтвердить удаление в интерфейсе и проверить отсутствие записи в PostgreSQL.")
     @Step("Удаление задачи и проверка отсутствия в БД")
     public void shouldDeleteTaskSuccessfully() throws SQLException {
 
@@ -676,7 +676,7 @@ public class TaskUiTest extends BaseUiTest {
     @Feature("Управление задачами")
     @Story("Отмена удаления задачи")
     @Severity(SeverityLevel.NORMAL)
-    @Description("Отмена удаления задачи. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Description("Создать задачу и отменить подтверждение удаления. Запись должна сохраниться в PostgreSQL; после проверки выполняется отдельная очистка.")
     @Step("Отмена удаления задачи")
     public void shouldCancelTaskDeletion() throws SQLException {
 

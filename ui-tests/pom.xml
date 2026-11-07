@@ -12,7 +12,19 @@
     <artifactId>ui-tests</artifactId>
 
 
+    <properties>
+        <allure.latest.ui.input>${maven.multiModuleProjectDirectory}/test-runs/NO_COMPLETED_UI_RUN</allure.latest.ui.input>
+        <allure.latest.ui.output>${maven.multiModuleProjectDirectory}/test-runs/NO_COMPLETED_UI_RUN/view</allure.latest.ui.output>
+        <allure.latest.ui.runId>No completed ui run</allure.latest.ui.runId>
+        <allure.latest.ui.order>0</allure.latest.ui.order>
+        <allure.maven.input>${allure.latest.ui.input}</allure.maven.input>
+        <allure.maven.output>${allure.latest.ui.output}</allure.maven.output>
+        <allure.maven.runId>${allure.latest.ui.runId}</allure.maven.runId>
+        <allure.maven.buildOrder>${allure.latest.ui.order}</allure.maven.buildOrder>
+    </properties>
+
     <dependencies>
+        <dependency><groupId>com.fasterxml.jackson.core</groupId><artifactId>jackson-databind</artifactId><version>2.18.2</version><scope>test</scope></dependency>
         <!-- Selenium WebDriver для UI-тестов -->
         <dependency>
             <groupId>org.seleniumhq.selenium</groupId>
@@ -43,4 +55,12 @@
         </dependency>
     </dependencies>
 
+    <build><plugins><plugin>
+        <groupId>org.codehaus.mojo</groupId><artifactId>build-helper-maven-plugin</artifactId><version>3.3.0</version>
+        <executions><execution><id>shared-reporting</id><phase>generate-test-sources</phase>
+            <goals><goal>add-test-source</goal></goals><configuration><sources>
+                <source>${project.basedir}/../reporting/src/main/java</source>
+            </sources></configuration>
+        </execution></executions>
+    </plugin></plugins></build>
 </project>

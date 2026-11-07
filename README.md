@@ -127,7 +127,7 @@ mvn -pl api-tests test
 Запуск всех модулей после завершения их настройки:
 
 ```bash
-mvn clean test
+mvn test -fae
 ```
 
 ## 📊 Результаты и дальнейшая работа
@@ -145,3 +145,9 @@ mvn clean test
 ---
 
 **Автор:** [MukhtarPashaTarkovskiy](https://github.com/MukhtarPashaTarkovskiy)
+
+## Allure: изолированные запуски и история
+
+Актуальные команды, Maven Plugin и настройка IntelliJ: [инструкция Allure](docs/allure-reporting.md). История хранится вне Maven target в test-runs.
+
+Просмотр последнего запуска без команд: [Allure двумя кнопками IntelliJ](docs/allure-clicks.md).

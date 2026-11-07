@@ -8,12 +8,12 @@ public abstract class BaseApiTest {
 
     protected TestDataCleanup cleanup;
 
-    @BeforeMethod
+    @BeforeMethod(description = "Подготовка окружения и изолированного состояния сценария")
     public void setUp() {
         cleanup = new TestDataCleanup();
     }
 
-    @AfterMethod(alwaysRun = true)
+    @AfterMethod(alwaysRun = true, description = "Завершение: очистка ресурсов и тестовых данных")
     public void tearDown() throws Exception {
         if (cleanup != null) {
             cleanup.cleanup();

@@ -10,6 +10,8 @@ on:
         options: [Smoke, Regression, All]
   push:
     branches: [develop]
+env:
+  TM_RUN_ID: gh-${{ github.run_id }}-${{ github.run_attempt }}
 permissions:
   contents: read
 # All suites use one test database/user: never overlap runs or matrix jobs.
@@ -109,68 +111,116 @@ jobs:
       - name: Run ${{ matrix.suite }}
         id: run
         shell: powershell
-        run: ./scripts/Invoke-TestMaven.ps1 -Suite ${{ matrix.suite }} -Headless -FromEnvironment
+        run: ./scripts/Invoke-TestMaven.ps1 -Suite ${{ matrix.suite }} -Headless -FromEnvironment -RunId $env:TM_RUN_ID
       - name: Audit textual results before upload
         id: audit
         if: always() && steps.settings.outcome == 'success' && steps.run.outcome != 'skipped'
         shell: powershell
         run: |
-          if (Test-Path '${{ matrix.module }}/target') {
-            ./scripts/Test-ReportSecrets.ps1 -FromEnvironment -Paths '${{ matrix.module }}/target'
+          if (Test-Path "test-runs/$env:TM_RUN_ID") {
+            ./scripts/Test-ReportSecrets.ps1 -FromEnvironment -Paths "test-runs/$env:TM_RUN_ID"
           } else { throw 'No test results were produced; artifact upload refused.' }
       - name: Upload audited Allure results
         if: always() && steps.audit.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: results-${{ matrix.suite }}
-          path: ${{ matrix.module }}/target/allure-results/
+          path: test-runs/${{ env.TM_RUN_ID }}/
           if-no-files-found: error
           retention-days: 14
   reports:
     needs: test
     if: always() && needs.test.result != 'skipped' && needs.test.result != 'cancelled'
     runs-on: windows-latest
-    timeout-minutes: 15
+    environment: test
+    timeout-minutes: 20
+    env:
+      TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
+      TEST_DB_URL: ${{ secrets.TEST_DB_URL }}
+      TEST_DB_USERNAME: ${{ secrets.TEST_DB_USERNAME }}
+      TEST_DB_PASSWORD: ${{ secrets.TEST_DB_PASSWORD }}
+      TEST_ALLOWED_DB_HOST: ${{ secrets.TEST_ALLOWED_DB_HOST }}
+      TEST_ALLOWED_DB_PORT: ${{ vars.TEST_ALLOWED_DB_PORT }}
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           pattern: results-*
-          path: target/download
-      - name: Find audited API and UI result pairs
-        id: available
-        shell: powershell
-        run: |
-          $found = $false
-          foreach ($kind in @('Smoke','Regression')) {
-            if ((Test-Path "target/download/results-Api$kind") -and (Test-Path "target/download/results-Ui$kind")) { $found = $true }
-          }
-          "found=$($found.ToString().ToLowerInvariant())" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
-          if (-not $found) { Write-Host 'No audited API/UI result pair: combined reports skipped. Inspect test jobs for the primary failure.' }
+          path: report-download
+      - uses: actions/cache/restore@v4
+        with:
+          path: .allure-history
+          key: allure-history-${{ github.ref_name }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: allure-history-${{ github.ref_name }}-
       - uses: actions/setup-java@v4
-        if: steps.available.outputs.found == 'true'
         with:
           distribution: temurin
           java-version: '17'
-      - name: Install pinned Allure CLI on the disposable runner
-        if: steps.available.outputs.found == 'true'
+      - name: Install pinned Allure 2 CLI
         shell: powershell
         run: npm install --global allure-commandline@2.46.1
-      - name: Build separate combined Smoke and Regression reports
-        if: steps.available.outputs.found == 'true'
+      - name: Assemble only this run and generate available reports
+        id: generate
         shell: powershell
         run: |
-          foreach ($kind in @('Smoke','Regression')) {
-            $api = "target/download/results-Api$kind"
-            $ui = "target/download/results-Ui$kind"
-            if ((Test-Path $api) -and (Test-Path $ui)) {
-              allure generate $api $ui --clean -o "target/allure-$kind"
-              if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $run = "test-runs/$env:TM_RUN_ID"
+          New-Item -ItemType Directory -Force -Path $run | Out-Null
+          foreach ($artifact in Get-ChildItem report-download -Directory) {
+            $id = Get-Content (Join-Path $artifact.FullName 'run.properties')
+            if (-not ($id -contains "runId=$env:TM_RUN_ID")) { throw 'Artifact Run ID mismatch.' }
+            if (-not (Test-Path "$run/run.properties")) { Copy-Item (Join-Path $artifact.FullName 'run.properties') "$run/run.properties" }
+            foreach ($module in @('api-tests','ui-tests')) {
+              $source = Join-Path $artifact.FullName $module
+              if (Test-Path $source) {
+                New-Item -ItemType Directory -Force -Path "$run/$module" | Out-Null
+                foreach ($suite in Get-ChildItem $source -Directory) {
+                  if (Test-Path "$run/$module/$($suite.Name)") { throw 'Duplicate module/suite artifact.' }
+                  Copy-Item $suite.FullName "$run/$module/$($suite.Name)" -Recurse
+                }
+              }
             }
           }
+          $failed = $false
+          foreach ($kind in @('Smoke','Regression','All')) {
+            foreach ($scope in @('api-tests','ui-tests','Combined')) {
+              $modules = if ($scope -eq 'Combined') { @('api-tests','ui-tests') } else { @($scope) }
+              $ready = $true
+              foreach ($module in $modules) { if (-not (Test-Path "$run/$module/$kind/completed.marker")) { $ready=$false } }
+              if (-not $ready) { continue }
+              & ./scripts/Get-AllureReport.ps1 -RunId $env:TM_RUN_ID -Scope $scope -Kind $kind -HistoryRoot .allure-history -FromEnvironment
+              if ($LASTEXITCODE -ne 0) { $failed=$true; continue }
+              $html = Get-ChildItem "$run/reports/$scope-$kind" -Directory | Sort-Object Name -Descending | Select-Object -First 1
+              $archive = ".allure-history/$env:TM_RUN_ID/$scope-$kind"
+              New-Item -ItemType Directory -Path $archive | Out-Null
+              Copy-Item "$($html.FullName)/html/history" "$archive/history" -Recurse
+              Copy-Item "$($html.FullName)/html/report-manifest.json" "$archive/report-manifest.json"
+              'audited' | Set-Content "$($html.FullName)/audited.marker"
+            }
+          }
+          if ($failed) { throw 'Some reports failed to generate; audited reports will still be uploaded.' }
+      - name: Collect audited reports only
+        if: always()
+        id: collect
+        shell: powershell
+        run: |
+          $found = $false
+          if (Test-Path "test-runs/$env:TM_RUN_ID/reports") {
+            foreach ($marker in Get-ChildItem "test-runs/$env:TM_RUN_ID/reports" -Filter audited.marker -Recurse) {
+              $name = $marker.Directory.Parent.Name + '-' + $marker.Directory.Name
+              New-Item -ItemType Directory -Force published-reports | Out-Null
+              Copy-Item "$($marker.Directory.FullName)/html" "published-reports/$name" -Recurse
+              $found = $true
+            }
+          }
+          "found=$($found.ToString().ToLowerInvariant())" | Out-File $env:GITHUB_OUTPUT -Encoding utf8 -Append
       - uses: actions/upload-artifact@v4
-        if: steps.available.outputs.found == 'true'
+        if: always() && steps.collect.outputs.found == 'true'
         with:
-          name: combined-allure-reports
-          path: target/allure-*/
-          if-no-files-found: error
-          retention-days: 14
+          name: allure-reports-${{ env.TM_RUN_ID }}
+          path: published-reports/
+          retention-days: 90
+      - uses: actions/cache/save@v4
+        if: always() && steps.collect.outputs.found == 'true'
+        with:
+          path: .allure-history
+          key: allure-history-${{ github.ref_name }}-${{ github.run_id }}-${{ github.run_attempt }}

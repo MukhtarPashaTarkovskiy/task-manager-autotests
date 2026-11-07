@@ -26,11 +26,11 @@ import ru.tarkovskiy.api.utils.TaskDataGenerator;
 import ru.tarkovskiy.api.utils.TestData;
 import ru.tarkovskiy.api.utils.TestDataGenerator;
 
-import static io.restassured.module.jsv.JsonSchemaValidator.matchesJsonSchemaInClasspath;
+import static ru.tarkovskiy.api.reporting.ApiChecks.matchesJsonSchemaInClasspath;
 import static org.hamcrest.Matchers.equalTo;
-import static org.testng.Assert.assertFalse;
-import static org.testng.Assert.assertNotNull;
-import static org.testng.Assert.assertTrue;
+import static ru.tarkovskiy.reporting.Checks.assertFalse;
+import static ru.tarkovskiy.reporting.Checks.assertNotNull;
+import static ru.tarkovskiy.reporting.Checks.assertTrue;
 import static ru.tarkovskiy.api.config.ApiConfig.BASE_URL;
 import static ru.tarkovskiy.api.config.SchemaPaths.TASK_LIST_RESPONSE;
 import static ru.tarkovskiy.api.config.SchemaPaths.TASK_RESPONSE;
@@ -40,7 +40,7 @@ public class TaskApiTest extends BaseApiTest {
     private AuthClient authClient;
     private TaskClient taskClient;
 
-    @BeforeMethod
+    @BeforeMethod(description = "Подготовка окружения и изолированного состояния сценария")
     public void setUpTaskClients() {
         SessionFilter session = new SessionFilter();
         authClient = new AuthClient(session);
@@ -52,7 +52,7 @@ public class TaskApiTest extends BaseApiTest {
     private void loginAsTestUser() {
         authClient.login(TestData.EXISTING_USERNAME, testPassword())
                 .then()
-                .statusCode(302);
+                .statusCode(ru.tarkovskiy.api.reporting.ApiChecks.expected(302));
     }
 
     private String testPassword() {
@@ -84,7 +84,7 @@ public class TaskApiTest extends BaseApiTest {
     @Step("Проверить HTTP 200 JSON Schema и поля задачи")
     private void assertTaskFields(Response response, TaskRequest task) {
         response.then()
-                .statusCode(200)
+                .statusCode(ru.tarkovskiy.api.reporting.ApiChecks.expected(200))
                 .body(matchesJsonSchemaInClasspath(TASK_RESPONSE))
                 .body("title", equalTo(task.title()))
                 .body("description", equalTo(task.description()))
@@ -105,7 +105,7 @@ public class TaskApiTest extends BaseApiTest {
     @Feature("Управление задачами")
     @Story("Создание задачи с обязательными полями")
     @Severity(SeverityLevel.CRITICAL)
-    @Description("Создание задачи с обязательными полями. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Description("Авторизоваться и создать уникальную задачу. Проверить HTTP 200, JSON Schema, сохранённые поля при повторном GET и наличие задачи в TEST PostgreSQL; очистка регистрируется до создания.")
     @Step("Создание задачи с обязательными полями")
     public void shouldCreateTaskSuccessfully() throws SQLException {
         loginAsTestUser();
@@ -122,7 +122,7 @@ public class TaskApiTest extends BaseApiTest {
     @Feature("Управление задачами")
     @Story("Получение задачи по идентификатору")
     @Severity(SeverityLevel.CRITICAL)
-    @Description("Получение задачи по идентификатору. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Description("Создать собственную задачу и получить её по идентификатору. Ожидаются HTTP 200, соответствие JSON Schema, совпадение полей и идентификатора.")
     @Step("Получение задачи по идентификатору")
     public void shouldGetTaskByIdSuccessfully() {
         loginAsTestUser();
@@ -139,7 +139,7 @@ public class TaskApiTest extends BaseApiTest {
     @Feature("Управление задачами")
     @Story("Получение списка задач")
     @Severity(SeverityLevel.CRITICAL)
-    @Description("Получение списка задач. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Description("Создать собственную задачу и получить список. Ожидаются HTTP 200, корректная схема списка и присутствие созданной задачи с ожидаемым названием.")
     @Step("Получение списка задач")
     public void shouldGetAllTasksSuccessfully() {
         loginAsTestUser();
@@ -147,7 +147,7 @@ public class TaskApiTest extends BaseApiTest {
         long taskId = createTestTask(taskClient, task);
 
         taskClient.getAllTasks().then()
-                .statusCode(200)
+                .statusCode(ru.tarkovskiy.api.reporting.ApiChecks.expected(200))
                 .body(matchesJsonSchemaInClasspath(TASK_LIST_RESPONSE))
                 .body("find { it.id == " + taskId + " }.title", equalTo(task.title()));
     }
@@ -157,11 +157,11 @@ public class TaskApiTest extends BaseApiTest {
     @Feature("Управление задачами")
     @Story("Обработка отсутствующей задачи")
     @Severity(SeverityLevel.NORMAL)
-    @Description("Обработка отсутствующей задачи. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Description("После авторизации запросить заведомо отсутствующий идентификатор задачи. Ожидается HTTP 404.")
     @Step("Обработка отсутствующей задачи")
     public void shouldNotGetNonExistingTask() {
         loginAsTestUser();
-        taskClient.getTaskById(-1L).then().statusCode(404);
+        taskClient.getTaskById(-1L).then().statusCode(ru.tarkovskiy.api.reporting.ApiChecks.expected(404));
     }
 
     @DataProvider(name = "invalidTaskTitles")
@@ -178,14 +178,14 @@ public class TaskApiTest extends BaseApiTest {
     @Feature("Управление задачами")
     @Story("Отклонение некорректного названия задачи")
     @Severity(SeverityLevel.NORMAL)
-    @Description("Отклонение некорректного названия задачи. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Description("Попытаться создать задачу с каждым недопустимым названием из DataProvider. Ожидается HTTP 400; возможный ошибочно созданный объект заранее учтён безопасной очисткой.")
     @Step("Отклонение некорректного названия задачи")
     public void shouldNotCreateTaskWithInvalidTitle(String invalidTitle, String description) {
         loginAsTestUser();
         TaskRequest task = new TaskRequest(
                 invalidTitle, "Проверка валидации названия", "TODO", "MEDIUM", null
         );
-        taskClient.createTask(task).then().statusCode(400);
+        taskClient.createTask(task).then().statusCode(ru.tarkovskiy.api.reporting.ApiChecks.expected(400));
     }
 
     @DataProvider(name = "validTaskTitleBoundaries")
@@ -198,7 +198,7 @@ public class TaskApiTest extends BaseApiTest {
     @Feature("Управление задачами")
     @Story("Создание задачи с граничной длиной названия")
     @Severity(SeverityLevel.NORMAL)
-    @Description("Создание задачи с граничной длиной названия. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Description("Проверить создание задач с допустимыми граничными длинами названия. Ожидаются HTTP 200, схема задачи, совпадение названия и наличие записи в БД; применяется защищённая очистка граничных данных.")
     @Step("Создание задачи с граничной длиной названия")
     public void shouldCreateTaskWithValidTitleBoundaries(String title) throws SQLException {
         loginAsTestUser();
@@ -218,7 +218,7 @@ public class TaskApiTest extends BaseApiTest {
         cleanup.trackBoundaryTask(taskId, TestData.EXISTING_USERNAME, title);
 
         response.then()
-                .statusCode(200)
+                .statusCode(ru.tarkovskiy.api.reporting.ApiChecks.expected(200))
                 .body(matchesJsonSchemaInClasspath(TASK_RESPONSE))
                 .body("title", equalTo(title));
         assertTaskExistsInDb(taskId);
@@ -234,7 +234,7 @@ public class TaskApiTest extends BaseApiTest {
     @Feature("Управление задачами")
     @Story("Сохранение выбранного статуса задачи")
     @Severity(SeverityLevel.NORMAL)
-    @Description("Сохранение выбранного статуса задачи. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Description("Создать задачу с каждым допустимым статусом. Проверить HTTP-контракт, сохранение выбранного статуса при повторном GET и наличие записи в БД.")
     @Step("Сохранение выбранного статуса задачи")
     public void shouldCreateTaskWithValidStatus(String status) throws SQLException {
         loginAsTestUser();
@@ -259,7 +259,7 @@ public class TaskApiTest extends BaseApiTest {
     @Feature("Управление задачами")
     @Story("Сохранение выбранного приоритета задачи")
     @Severity(SeverityLevel.NORMAL)
-    @Description("Сохранение выбранного приоритета задачи. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Description("Создать задачу с каждым допустимым приоритетом. Проверить HTTP-контракт, сохранение выбранного приоритета при повторном GET и наличие записи в БД.")
     @Step("Сохранение выбранного приоритета задачи")
     public void shouldCreateTaskWithValidPriority(String priority) throws SQLException {
         loginAsTestUser();
@@ -289,7 +289,7 @@ public class TaskApiTest extends BaseApiTest {
     @Feature("Управление задачами")
     @Story("Отклонение недопустимого статуса или приоритета")
     @Severity(SeverityLevel.NORMAL)
-    @Description("Отклонение недопустимого статуса или приоритета. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Description("Передать пустой или неизвестный статус либо приоритет. Для каждого варианта ожидается HTTP 400; очистка защищает среду при ошибочном принятии запроса.")
     @Step("Отклонение недопустимого статуса или приоритета")
     public void shouldNotCreateTaskWithInvalidEnums(
             String status, String priority, String description) {
@@ -302,7 +302,7 @@ public class TaskApiTest extends BaseApiTest {
 
         // Если сервер ошибочно примет запрос, cleanup сможет найти созданную задачу.
         trackGeneratedTask(task);
-        taskClient.createTask(task).then().statusCode(400);
+        taskClient.createTask(task).then().statusCode(ru.tarkovskiy.api.reporting.ApiChecks.expected(400));
     }
 
     @Test(description = "API: Редактирование задачи")
@@ -310,7 +310,7 @@ public class TaskApiTest extends BaseApiTest {
     @Feature("Управление задачами")
     @Story("Редактирование задачи")
     @Severity(SeverityLevel.CRITICAL)
-    @Description("Редактирование задачи. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Description("Создать задачу, изменить описание, статус и приоритет через PUT. Ожидаются HTTP 200, соответствие схеме, неизменный идентификатор и новые значения при повторном чтении.")
     @Step("Редактирование задачи")
     public void shouldUpdateTaskSuccessfully() throws SQLException {
         loginAsTestUser();
@@ -346,7 +346,7 @@ public class TaskApiTest extends BaseApiTest {
     @Feature("Управление задачами")
     @Story("Отклонение некорректных изменений задачи")
     @Severity(SeverityLevel.NORMAL)
-    @Description("Отклонение некорректных изменений задачи. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Description("Попытаться изменить задачу недопустимыми значениями. Ожидается HTTP 400; последующий GET должен вернуть исходные поля без изменений.")
     @Step("Отклонение некорректных изменений задачи")
     public void shouldNotUpdateTaskWithInvalidData(
             String title, String status, String priority, String description) {
@@ -357,7 +357,7 @@ public class TaskApiTest extends BaseApiTest {
         TaskRequest invalid = new TaskRequest(
                 title, original.description(), status, priority, original.deadline()
         );
-        taskClient.updateTask(taskId, invalid).then().statusCode(400);
+        taskClient.updateTask(taskId, invalid).then().statusCode(ru.tarkovskiy.api.reporting.ApiChecks.expected(400));
         assertTaskFields(taskClient.getTaskById(taskId), original);
     }
 
@@ -366,7 +366,7 @@ public class TaskApiTest extends BaseApiTest {
     @Feature("Управление задачами")
     @Story("Удаление задачи и проверка отсутствия в БД")
     @Severity(SeverityLevel.CRITICAL)
-    @Description("Удаление задачи и проверка отсутствия в БД. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Description("Удалить созданную задачу. Ожидаются HTTP 200 при первом DELETE, HTTP 404 при чтении и повторном удалении, а также отсутствие записи в TEST PostgreSQL.")
     @Step("Удаление задачи и проверка отсутствия в БД")
     public void shouldDeleteTaskSuccessfully() throws SQLException {
         loginAsTestUser();
@@ -374,13 +374,13 @@ public class TaskApiTest extends BaseApiTest {
         long taskId = createTestTask(taskClient, task);
         assertTaskExistsInDb(taskId);
 
-        taskClient.deleteTask(taskId).then().statusCode(200);
-        taskClient.getTaskById(taskId).then().statusCode(404);
+        taskClient.deleteTask(taskId).then().statusCode(ru.tarkovskiy.api.reporting.ApiChecks.expected(200));
+        taskClient.getTaskById(taskId).then().statusCode(ru.tarkovskiy.api.reporting.ApiChecks.expected(404));
         assertFalse(
                 TaskDbHelper.taskExists(taskId, TestData.EXISTING_USERNAME),
                 "Задача осталась в тестовой БД после DELETE"
         );
-        taskClient.deleteTask(taskId).then().statusCode(404);
+        taskClient.deleteTask(taskId).then().statusCode(ru.tarkovskiy.api.reporting.ApiChecks.expected(404));
     }
 
     @Test(description = "API: Защита API задач без авторизации")
@@ -388,12 +388,12 @@ public class TaskApiTest extends BaseApiTest {
     @Feature("Управление задачами")
     @Story("Защита API задач без авторизации")
     @Severity(SeverityLevel.CRITICAL)
-    @Description("Защита API задач без авторизации. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Description("Использовать новую неавторизованную сессию для GET списка задач. Ожидается HTTP 302 с перенаправлением на вход.")
     @Step("Защита API задач без авторизации")
     public void shouldNotGetTasksWithoutAuthentication() {
         // Новый SessionFilter в @BeforeMethod ещё не авторизован.
         taskClient.getAllTasks().then()
-                .statusCode(302)
+                .statusCode(ru.tarkovskiy.api.reporting.ApiChecks.expected(302))
                 .header("Location", equalTo(BASE_URL + "/login"));
     }
 
@@ -402,7 +402,7 @@ public class TaskApiTest extends BaseApiTest {
     @Feature("Управление задачами")
     @Story("Запрет доступа к задаче другого пользователя")
     @Severity(SeverityLevel.CRITICAL)
-    @Description("Запрет доступа к задаче другого пользователя. Выполнить действия сценария и проверить существующие ожидания интерфейса, HTTP или PostgreSQL.")
+    @Description("Создать задачу владельца и независимую сессию второго пользователя. Чтение, изменение и удаление чужой задачи должны вернуть HTTP 404; данные владельца должны сохраниться.")
     @Step("Запрет доступа к задаче другого пользователя")
     public void shouldNotGetAnotherUsersTask() {
         // Владелец использует основную сессию.
@@ -415,18 +415,18 @@ public class TaskApiTest extends BaseApiTest {
         RegistrationRequest secondUser = TestDataGenerator.newUser();
 
         cleanup.track(secondUser.email()); // ДО регистрации
-        secondAuthClient.register(secondUser).then().statusCode(201);
+        secondAuthClient.register(secondUser).then().statusCode(ru.tarkovskiy.api.reporting.ApiChecks.expected(201));
         secondAuthClient.login(secondUser.username(), testPassword())
-                .then().statusCode(302);
+                .then().statusCode(ru.tarkovskiy.api.reporting.ApiChecks.expected(302));
 
         TaskRequest task = TaskDataGenerator.newTask();
         long taskId = createTestTask(taskClient, task);
 
         // Чужую задачу нельзя прочитать, изменить или удалить.
-        secondTaskClient.getTaskById(taskId).then().statusCode(404);
+        secondTaskClient.getTaskById(taskId).then().statusCode(ru.tarkovskiy.api.reporting.ApiChecks.expected(404));
         secondTaskClient.updateTask(taskId, TaskDataGenerator.newTask())
-                .then().statusCode(404);
-        secondTaskClient.deleteTask(taskId).then().statusCode(404);
+                .then().statusCode(ru.tarkovskiy.api.reporting.ApiChecks.expected(404));
+        secondTaskClient.deleteTask(taskId).then().statusCode(ru.tarkovskiy.api.reporting.ApiChecks.expected(404));
 
         // Данные владельца сохранились без изменений.
         assertTaskFields(taskClient.getTaskById(taskId), task);

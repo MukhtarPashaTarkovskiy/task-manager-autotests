@@ -27,32 +27,24 @@ public class BaseUiTest {
         attachScreenshot("Состояние браузера при падении");
     }
 
-    public void attachFailureDiagnostics(org.openqa.selenium.WebDriverException failure) {
+    public void attachFailureDiagnostics(Throwable failure) {
         ru.tarkovskiy.ui.reporting.UiFailureDiagnostics.attach(driver, null, failure);
     }
 
     public void attachScreenshot(String name) {
-        if (!(driver instanceof TakesScreenshot screenshot)) {
-            return;
-        }
-        try {
-            Allure.addAttachment(name, "image/png",
-                    new ByteArrayInputStream(screenshot.getScreenshotAs(OutputType.BYTES)), ".png");
-        } catch (RuntimeException ignored) {
-            // Reporting must never replace the original failure or interrupt cleanup.
-            // Do not log exception text: driver diagnostics can contain sensitive data.
-            System.err.println("Allure: скриншот недоступен; исходная ошибка сохранена.");
-        }
+        ru.tarkovskiy.ui.reporting.SafeScreenshot.attach(driver, name);
     }
 
-    @BeforeSuite(alwaysRun = true)
+    @BeforeSuite(alwaysRun = true, description = "Подготовка: ожидание готовности TEST Render")
     public void waitForTestServer() throws Exception {
         new RenderReadiness().waitForRender();
     }
 
-    @BeforeMethod
+    @BeforeMethod(description = "Подготовка окружения и изолированного состояния сценария")
     public void setUp() {
 
+        driver = null;
+        loginPage = null;
         ChromeOptions options = new ChromeOptions();
         boolean headless = "true".equalsIgnoreCase(System.getenv("HEADLESS"));
         if (headless) {
@@ -65,11 +57,11 @@ public class BaseUiTest {
         loginPage = new LoginPage(driver);
     }
 
-    @AfterMethod(alwaysRun = true)
+    @AfterMethod(alwaysRun = true, description = "Завершение: очистка ресурсов и тестовых данных")
     public void tearDown() {
 
         if (driver != null) {
-            driver.quit();
+            try { driver.quit(); } finally { driver = null; loginPage = null; }
         }
     }
 }

@@ -1,0 +1,138 @@
+name: Task Manager Ubuntu test suites
+
+on:
+  workflow_dispatch:
+    inputs:
+      suite:
+        description: Existing TEST suites to run sequentially
+        type: choice
+        required: true
+        default: Smoke
+        options: [Smoke, Regression, All]
+  push:
+    branches: [develop]
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  gate:
+    if: github.ref == 'refs/heads/develop' && (github.event_name == 'workflow_dispatch' || vars.UBUNTU_CI_ENABLED == 'true')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      allowed: ${{ steps.guard.outputs.allowed }}
+    steps:
+      - name: Prevent two automatic full CI workflows
+        id: guard
+        uses: actions/github-script@v7
+        with:
+          script: |
+            if (context.eventName === 'workflow_dispatch') {
+              core.setOutput('allowed', 'true');
+              return;
+            }
+            try {
+              const {data} = await github.rest.actions.getWorkflow({
+                owner: context.repo.owner, repo: context.repo.repo, workflow_id: 'tests.yml'
+              });
+              if (!['disabled_manually', 'disabled_inactivity'].includes(data.state)) {
+                core.setFailed('Disable the Windows workflow before enabling automatic Ubuntu CI. No Ubuntu tests started.');
+                return;
+              }
+              core.setOutput('allowed', 'true');
+            } catch (_) {
+              core.setFailed('Cannot verify Windows workflow state; automatic Ubuntu tests refused.');
+            }
+
+  test:
+    needs: gate
+    if: needs.gate.outputs.allowed == 'true'
+    runs-on: ubuntu-24.04
+    environment: test
+    timeout-minutes: 90
+    # Same literal group as Windows CI and Ubuntu diagnostic. One sequential job, no matrix.
+    concurrency:
+      group: task-manager-test-environment
+      cancel-in-progress: false
+    env:
+      TM_RUN_ID: ubuntu-ci-${{ github.run_id }}-${{ github.run_attempt }}
+      TEST_BASE_URL: https://task-manager-test-588r.onrender.com
+      HEADLESS: 'true'
+      SUITE_SELECTION: ${{ github.event_name == 'workflow_dispatch' && inputs.suite || 'All' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+      - uses: actions/cache/restore@v4
+        with:
+          path: .allure-history-ubuntu
+          key: allure-ubuntu-${{ github.ref_name }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: allure-ubuntu-${{ github.ref_name }}-
+      - name: Select compatible ChromeDriver for installed Google Chrome
+        run: python3 scripts/run-ui-ubuntu-diagnostic.py prepare-browser
+      - name: Install pinned Allure CLI
+        run: npm install --global allure-commandline@2.46.1
+      - name: Build and run selected existing XML suites, audit and generate reports
+        id: run
+        env:
+          TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
+          TEST_DB_URL: ${{ secrets.TEST_DB_URL }}
+          TEST_DB_USERNAME: ${{ secrets.TEST_DB_USERNAME }}
+          TEST_DB_PASSWORD: ${{ secrets.TEST_DB_PASSWORD }}
+          TEST_ALLOWED_DB_HOST: ${{ secrets.TEST_ALLOWED_DB_HOST }}
+          TEST_ALLOWED_DB_PORT: ${{ vars.TEST_ALLOWED_DB_PORT }}
+        run: python3 scripts/run-tests-ubuntu.py --suite "$SUITE_SELECTION"
+      - name: Upload ApiSmoke results
+        if: always() && hashFiles(format('test-runs/{0}/ubuntu-ci/audited.marker', env.TM_RUN_ID)) != '' && (env.SUITE_SELECTION == 'Smoke' || env.SUITE_SELECTION == 'All')
+        uses: actions/upload-artifact@v4
+        with:
+          name: ubuntu-ApiSmoke-${{ github.run_id }}-${{ github.run_attempt }}
+          path: test-runs/${{ env.TM_RUN_ID }}/ubuntu-ci/ApiSmoke/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload UiSmoke results
+        if: always() && hashFiles(format('test-runs/{0}/ubuntu-ci/audited.marker', env.TM_RUN_ID)) != '' && (env.SUITE_SELECTION == 'Smoke' || env.SUITE_SELECTION == 'All')
+        uses: actions/upload-artifact@v4
+        with:
+          name: ubuntu-UiSmoke-${{ github.run_id }}-${{ github.run_attempt }}
+          path: test-runs/${{ env.TM_RUN_ID }}/ubuntu-ci/UiSmoke/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload ApiRegression results
+        if: always() && hashFiles(format('test-runs/{0}/ubuntu-ci/audited.marker', env.TM_RUN_ID)) != '' && (env.SUITE_SELECTION == 'Regression' || env.SUITE_SELECTION == 'All')
+        uses: actions/upload-artifact@v4
+        with:
+          name: ubuntu-ApiRegression-${{ github.run_id }}-${{ github.run_attempt }}
+          path: test-runs/${{ env.TM_RUN_ID }}/ubuntu-ci/ApiRegression/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload UiRegression results
+        if: always() && hashFiles(format('test-runs/{0}/ubuntu-ci/audited.marker', env.TM_RUN_ID)) != '' && (env.SUITE_SELECTION == 'Regression' || env.SUITE_SELECTION == 'All')
+        uses: actions/upload-artifact@v4
+        with:
+          name: ubuntu-UiRegression-${{ github.run_id }}-${{ github.run_attempt }}
+          path: test-runs/${{ env.TM_RUN_ID }}/ubuntu-ci/UiRegression/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload audited Allure HTML, inputs and run summary
+        if: always() && hashFiles(format('test-runs/{0}/ubuntu-ci/audited.marker', env.TM_RUN_ID)) != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: ubuntu-allure-${{ env.SUITE_SELECTION }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            test-runs/${{ env.TM_RUN_ID }}/ubuntu-ci/reports/
+            test-runs/${{ env.TM_RUN_ID }}/ubuntu-ci/status.json
+          if-no-files-found: error
+          retention-days: 90
+      - uses: actions/cache/save@v4
+        if: always() && hashFiles(format('test-runs/{0}/ubuntu-ci/history-audited.marker', env.TM_RUN_ID)) != ''
+        with:
+          path: .allure-history-ubuntu
+          key: allure-ubuntu-${{ github.ref_name }}-${{ github.run_id }}-${{ github.run_attempt }}

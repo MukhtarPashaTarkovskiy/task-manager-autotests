@@ -59,6 +59,7 @@ jobs:
       TEST_ALLOWED_DB_PORT: ${{ vars.TEST_ALLOWED_DB_PORT }}
       TEST_BASE_URL: https://task-manager-test-588r.onrender.com
       HEADLESS: 'true'
+      SE_SKIP_DRIVER_IN_PATH: 'true'
     steps:
       - uses: actions/checkout@v4
       - name: Validate test environment settings

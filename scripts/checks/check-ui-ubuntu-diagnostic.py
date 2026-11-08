@@ -18,6 +18,41 @@ launcher = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(launcher)
 
 
+def prepared_fake_browser(env, scratch):
+    """Actual prepare-browser with a fake installed pair; downloads/real Chrome forbidden."""
+    driver = scratch / 'fake driver'
+    driver.write_text('''#!/usr/bin/python3 -I
+import hashlib, json, os, pathlib, subprocess, sys
+if sys.argv[1:] == ['--version']:
+    print('ChromeDriver 157.0.8103.38')
+    raise SystemExit(0)
+if sys.argv[1:] == ['--exit-seven']:
+    raise SystemExit(7)
+browser = sys.argv[1] == '--browser'
+args = sys.argv[2:] if browser else sys.argv[1:]
+root = pathlib.Path(args[2])
+keys = ('PATH', 'HOME', 'TMPDIR', 'LANG', 'HEADLESS', 'XDG_CACHE_HOME', 'XDG_CONFIG_HOME', 'XDG_RUNTIME_DIR')
+blocked = [k for k in os.environ if k.startswith(('TEST_', 'TM_')) or k in ('JAVA_TOOL_OPTIONS', '_JAVA_OPTIONS', 'JDK_JAVA_OPTIONS', 'MAVEN_OPTS', 'MAVEN_ARGS', 'CLASSPATH')]
+data = dict(blockedKeys=sorted(blocked), args=args, systemDigests={k: hashlib.sha256(os.environ[k].encode()).hexdigest() for k in keys if k in os.environ})
+(root / ('browser.json' if browser else 'driver.json')).write_text(json.dumps(data))
+if not browser:
+    subprocess.run(['/usr/bin/python3', '-I', __file__, '--browser', *args], check=True)
+''')
+    driver.chmod(0o700)
+    env = dict(env, RUNNER_TEMP=str(scratch), GITHUB_ENV=str(scratch / 'github-env'))
+    original_file, original_access, original_version = Path.is_file, launcher.os.access, launcher.executable_version
+    chrome = '/usr/bin/google-chrome'
+    with patch.object(launcher, 'require_linux'), \
+         patch.object(Path, 'is_file', lambda path: str(path) == chrome or original_file(path)), \
+         patch.object(launcher.os, 'access', lambda path, mode: str(path) == chrome or original_access(path, mode)), \
+         patch.object(launcher.shutil, 'which', return_value=str(driver)), \
+         patch.object(launcher, 'executable_version', lambda path: '157.0.8103.38' if str(path) == chrome else original_version(path)), \
+         patch.object(launcher, 'fetch', side_effect=AssertionError('Network forbidden')):
+        launcher.prepare_browser(env)
+    values = dict(line.split('=', 1) for line in Path(env['GITHUB_ENV']).read_text().splitlines())
+    return dict(env, **values), driver
+
+
 class OfflineChecks(unittest.TestCase):
     def env(self):
         return dict(TEST_BASE_URL=launcher.ORIGIN, HEADLESS='true', TM_RUN_ID='offline-run', RUNNER_TEMP='/tmp',
@@ -72,6 +107,22 @@ class OfflineChecks(unittest.TestCase):
     def test_smoke_preserves_test_credentials(self):
         launcher.validate_settings('UiSmoke', self.env())
         self.assertEqual(launcher.child_env(self.env(), 'UiSmoke')['TEST_DB_URL'], self.env()['TEST_DB_URL'])
+
+    def test_prepared_driver_removes_secrets_from_driver_and_descendant(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            scratch = Path(temporary)
+            env, actual = prepared_fake_browser(self.env(), scratch)
+            wrapper = Path(env['UI_DIAGNOSTIC_DRIVER_PATH'])
+            self.assertNotEqual(wrapper, actual)
+            child = dict(os.environ, **env, TEST_FUTURE_SECRET='SYNTHETIC_future', TM_PRIVATE_SETTING='SYNTHETIC_setting',
+                         JAVA_TOOL_OPTIONS='SYNTHETIC_override')
+            before = dict(child)
+            subprocess.run([str(wrapper), '--probe', 'direct', str(scratch)], env=child, check=True, timeout=10)
+            self.assertEqual(child, before)
+            for name in ('driver.json', 'browser.json'):
+                self.assertEqual(json.loads((scratch / name).read_text())['blockedKeys'], [])
+            self.assertEqual(subprocess.run([str(wrapper), '--exit-seven'], env=child, timeout=10).returncode, 7)
+            self.assertEqual(launcher.executable_version(wrapper), env['UI_DIAGNOSTIC_DRIVER_VERSION'])
 
     def test_invalid_targets_are_refused_offline(self):
         for key, value in [('TEST_BASE_URL', 'https://prod.example'), ('TM_RUN_ID', '../old'),
@@ -239,7 +290,8 @@ def compile_java_probe(args):
     env.update(UI_DIAGNOSTIC_CHROME_VERSION='157.0.8103.38', UI_DIAGNOSTIC_DRIVER_VERSION='157.0.8103.38')
     sources = [*sorted((ROOT / 'ui-tests/src/test/java').rglob('*.java')),
                *sorted((ROOT / 'reporting/src/main/java').rglob('*.java')),
-               ROOT / 'scripts/checks/UbuntuDiagnosticLauncherProbe.java']
+               ROOT / 'scripts/checks/UbuntuDiagnosticLauncherProbe.java',
+               ROOT / 'scripts/checks/UbuntuDriverEnvironmentProbe.java']
     with tempfile.TemporaryDirectory(prefix='ubuntu-launcher-offline-') as scratch:
         compiler = ['java', 'com.sun.tools.javac.Main', '-proc:none', '-encoding', 'UTF-8']
         compiler += ['-source', '17', '-target', '17', '--system', str(args.jdk_home)] if args.jdk_home else ['--release', '17']
@@ -250,6 +302,17 @@ def compile_java_probe(args):
                     'ru.tarkovskiy.ui.base.UbuntuDiagnosticLauncherProbe', scratch], env=env, cwd=scratch, timeout=30)
         if checked.returncode:
             raise SystemExit(checked.returncode)
+        prepared, driver = prepared_fake_browser(dict(env, **OfflineChecks().env()), Path(scratch))
+        for mode in ('NavigationOnly', 'UiSmoke', 'UiRegression'):
+            child = launcher.child_env(prepared, 'NavigationOnly' if mode == 'NavigationOnly' else 'UiSmoke')
+            child.update(TEST_FUTURE_SECRET='SYNTHETIC_future', TM_PRIVATE_SETTING='SYNTHETIC_setting', TMPDIR=scratch)
+            if mode == 'UiRegression':
+                child['TM_SUITE'] = 'Regression'
+            checked = subprocess.run(['java', '-cp', os.pathsep.join([scratch, *jars]),
+                'ru.tarkovskiy.ui.base.UbuntuDriverEnvironmentProbe', mode, scratch, str(driver)],
+                env=child, cwd=scratch, timeout=30)
+            if checked.returncode:
+                raise SystemExit(checked.returncode)
 
 
 if __name__ == '__main__':

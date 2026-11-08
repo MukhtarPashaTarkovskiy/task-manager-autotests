@@ -33,16 +33,14 @@ public final class UbuntuDiagnosticLauncher {
     public static void main(String[] args) {
         int code = 1;
         try {
-            if (args.length != 1 || !List.of("NavigationOnly", "UiSmoke").contains(args[0]))
+            if (args.length != 1 || !List.of("NavigationOnly", "UiSmoke", "UiRegression").contains(args[0]))
                 throw new IllegalArgumentException("Invalid diagnostic mode");
             if (!"Linux".equals(System.getProperty("os.name")) || Runtime.version().feature() != 17
                     || !"true".equals(System.getenv("HEADLESS")) || !Boolean.getBoolean("tm.reporting.initialized"))
                 throw new IllegalStateException("Linux Java 17 headless reporting environment required");
             NavigationDiagnostics.requireTarget(UiConfig.LOGIN_URL);
-            Path driver = Path.of(required("UI_DIAGNOSTIC_DRIVER_PATH"));
-            if (!Files.isExecutable(driver)) throw new IllegalStateException("Selected driver unavailable");
-            System.setProperty("webdriver.chrome.driver", driver.toString());
-            code = "NavigationOnly".equals(args[0]) ? navigation(UbuntuDiagnosticLauncher::newBrowser) : smoke();
+            configureDriver();
+            code = "NavigationOnly".equals(args[0]) ? navigation(UbuntuDiagnosticLauncher::newBrowser) : suite(args[0]);
         } catch (Throwable failure) {
             // Never print arbitrary WebDriver, TestNG or JDBC exception text.
             System.out.println("UI_UBUNTU_DIAGNOSTIC failed; inspect audited diagnostics");
@@ -54,10 +52,20 @@ public final class UbuntuDiagnosticLauncher {
         ChromeOptions options = new ChromeOptions();
         options.setBinary(required("UI_DIAGNOSTIC_CHROME_PATH"));
         options.addArguments("--headless=new", "--window-size=1440,1000", "--disable-dev-shm-usage");
-        ChromeDriverService service = new ChromeDriverService.Builder()
+        return new ChromeDriver(selectedService(), options);
+    }
+
+    // Shared with offline process probes: configure the exact production launch paths.
+    static void configureDriver() {
+        Path driver = Path.of(required("UI_DIAGNOSTIC_DRIVER_PATH"));
+        if (!Files.isExecutable(driver)) throw new IllegalStateException("Selected driver unavailable");
+        System.setProperty("webdriver.chrome.driver", driver.toString());
+    }
+
+    static ChromeDriverService selectedService() {
+        return new ChromeDriverService.Builder()
                 .usingDriverExecutable(Path.of(required("UI_DIAGNOSTIC_DRIVER_PATH")).toFile())
                 .withLogOutput(OutputStream.nullOutputStream()).build();
-        return new ChromeDriver(service, options);
     }
 
     // No TestNG instance, BaseUiTest fixture, auth method, user/task operation or DB call in this path.
@@ -129,29 +137,15 @@ public final class UbuntuDiagnosticLauncher {
         Allure.addAttachment("TEST Render readiness", "text/plain", report, ".txt");
     }
 
-    private static int smoke() {
-        // Reuse the existing Java target validator; validation makes no connection.
+    private static int suite(String mode) throws Exception {
         DbConnection.validateTarget(required("TEST_DB_URL"), required("TEST_ALLOWED_DB_HOST"), required("TEST_ALLOWED_DB_PORT"));
         required("TEST_USER_PASSWORD"); required("TEST_DB_USERNAME"); required("TEST_DB_PASSWORD");
-        TestNG testng = new TestNG();
-        testng.setUseDefaultListeners(false);
-        testng.setOutputDirectory(Path.of(System.getProperty("tm.run.part")).resolve("testng-output").toString());
-        testng.setTestSuites(List.of("ui-tests/smoke-tests.xml"));
-        TestListenerAdapter counts = new TestListenerAdapter();
-        testng.addListener((ITestNGListener) counts);
-        testng.addListener(new IInvokedMethodListener() {
+        return ru.tarkovskiy.reporting.UbuntuSuiteRunner.run("ui-tests",
+                mode.equals("UiSmoke") ? "Smoke" : "Regression", new IInvokedMethodListener() {
             @Override public void beforeInvocation(IInvokedMethod method, ITestResult result) {
-                if (method.isTestMethod() && result.getInstance() instanceof BaseUiTest test) {
-                    // Refuse business execution if the default system Chrome differs from the selected pair.
-                    verifySession(test.driver);
-                }
+                if (method.isTestMethod() && result.getInstance() instanceof BaseUiTest test) verifySession(test.driver);
             }
         });
-        testng.run();
-        int passed = counts.getPassedTests().size(), failed = counts.getFailedTests().size(), skipped = counts.getSkippedTests().size();
-        System.out.println("UI_DIAGNOSTIC_RESULT mode=UiSmoke passed=" + passed + " failed=" + failed + " skipped=" + skipped);
-        // A skipped test or configuration failure must never make this diagnostic job green.
-        return passed == 4 && failed == 0 && skipped == 0 && !testng.hasFailure() && !testng.hasSkip() ? 0 : 1;
     }
 
     static void verifySession(WebDriver driver) {

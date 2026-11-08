@@ -121,6 +121,28 @@ def fetch(url):
         return response.read()
 
 
+def isolated_driver(driver, env):
+    """Selenium 4.27 merges withEnvironment into inherited env; filter at exec instead.
+
+    Preserve system/browser settings; execve forwards arguments and the driver's exit
+    status/signals without a shell or a persistent proxy. No secret values in this file.
+    """
+    driver = Path(driver).resolve(strict=True)
+    if not driver.is_file() or not os.access(driver, os.X_OK):
+        raise ValueError('Selected driver unavailable')
+    directory = Path(tempfile.mkdtemp(prefix='ui-ubuntu-driver-env-', dir=env['RUNNER_TEMP']))
+    wrapper = directory / 'chromedriver'
+    source = ("#!/usr/bin/python3 -I\nimport os, sys\n"
+              f"driver = {str(driver)!r}\n"
+              f"overrides = {JAVA_OVERRIDES!r}\n"
+              "clean = {k: v for k, v in os.environ.items() if not k.startswith(('TEST_', 'TM_')) and k not in overrides}\n"
+              "os.execve(driver, [driver, *sys.argv[1:]], clean)\n")
+    with wrapper.open('x') as output:
+        output.write(source)
+    wrapper.chmod(0o700)
+    return wrapper
+
+
 def prepare_browser(env):
     require_linux()
     chrome = Path('/usr/bin/google-chrome')
@@ -142,6 +164,11 @@ def prepare_browser(env):
         driver.chmod(0o700)
         if executable_version(driver) != driver_version:
             raise ValueError('Downloaded driver version mismatch')
+    # Every Ubuntu UI entry point already uses this explicitly selected executable.
+    # Chrome inherits the real driver's filtered environment, not the test JVM's.
+    driver = isolated_driver(driver, env)
+    if executable_version(driver) != driver_version:
+        raise ValueError('Isolated driver version mismatch')
     values = dict(UI_DIAGNOSTIC_CHROME_PATH=str(chrome), UI_DIAGNOSTIC_DRIVER_PATH=str(driver),
                   UI_DIAGNOSTIC_CHROME_VERSION=chrome_version, UI_DIAGNOSTIC_DRIVER_VERSION=driver_version)
     if any('\n' in v or '\r' in v for v in values.values()):
@@ -191,6 +218,9 @@ def diagnostics(raw, env):
         if line in headers:
             active = True
             output.append(line)
+        elif re.fullmatch(r'UBUNTU_SUITE_RESULT module=(api-tests|ui-tests) suite=(Smoke|Regression) passed=[0-9]+ failed=[0-9]+ skipped=[0-9]+ complete=(true|false)', line):
+            output.append(line)
+            active = False
         elif re.fullmatch(r'UI_DIAGNOSTIC_RESULT mode=(NavigationOnly|UiSmoke) passed=[0-9]+ failed=[0-9]+ skipped=[0-9]+', line):
             output.append(line)
             active = False
@@ -229,7 +259,9 @@ def audit(directory, env):
     return count
 
 
-def commands(root, scratch, mode, env):
+def commands(root, scratch, mode, env, module='ui-tests', main_class='ru.tarkovskiy.ui.base.UbuntuDiagnosticLauncher'):
+    if module not in ('api-tests', 'ui-tests'):
+        raise ValueError('Unapproved module')
     repo = Path.home() / '.m2/repository'
     plugin = 'org.apache.maven.plugins:maven-dependency-plugin:3.8.1:'
     import xml.etree.ElementTree as ET
@@ -238,16 +270,16 @@ def commands(root, scratch, mode, env):
     if not re.fullmatch(r'[0-9.]+', aspect):
         raise ValueError('Invalid AspectJ version')
     maven = ['mvn', '-B', '-ntp', f'-Dmaven.repo.local={repo}']
-    compile_command = [*maven, '-pl', 'ui-tests', '-am', 'test-compile']
-    dependencies = [*maven, '-f', 'ui-tests/pom.xml', plugin + 'build-classpath',
+    compile_command = [*maven, '-pl', module, '-am', 'test-compile']
+    dependencies = [*maven, '-f', module + '/pom.xml', plugin + 'build-classpath',
                     f'-Dmdep.outputFile={scratch / "classpath.txt"}', plugin + 'get', f'-Dartifact=org.aspectj:aspectjweaver:{aspect}']
     agent = root / 'target/reporting-agent.jar'
     aspect_jar = repo / f'org/aspectj/aspectjweaver/{aspect}/aspectjweaver-{aspect}.jar'
     # Defer reading the classpath until after Maven has produced it.
     def launch():
-        cp = os.pathsep.join((str(root / 'ui-tests/target/test-classes'), (scratch / 'classpath.txt').read_text().strip()))
-        return ['java', f'-javaagent:{agent}={root},ui-tests', f'-javaagent:{aspect_jar}', '-cp', cp,
-                'ru.tarkovskiy.ui.base.UbuntuDiagnosticLauncher', mode]
+        cp = os.pathsep.join((str(root / module / 'target/test-classes'), (scratch / 'classpath.txt').read_text().strip()))
+        return ['java', f'-javaagent:{agent}={root},{module}', f'-javaagent:{aspect_jar}', '-cp', cp,
+                main_class, mode]
     return compile_command, dependencies, launch
 
 

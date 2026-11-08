@@ -48,6 +48,15 @@ ChromeDriver из PATH. Если MAJOR.MINOR.BUILD не совпадает, в R
 целиком: записывается только фиксированный chromedriver binary. Существующий Chrome
 runner не обновляется. Driver явно выбирается свойством webdriver.chrome.driver.
 
+Выбранный driver path ведёт через приватный Linux launcher в RUNNER_TEMP:
+`os.execve` запускает настоящий драйвер без `TEST_*`, `TM_*` и JVM/Maven overrides.
+Секреты остаются в тестовой JVM, но не наследуются ChromeDriver и его Chrome.
+Системные PATH/HOME/TMPDIR/XDG/locale/HEADLESS сохраняются; аргументы, версии и код
+завершения драйвера передаются без изменений. Это также применяется к NavigationOnly.
+Одного `withEnvironment` недостаточно: Selenium 4.27.0 дополняет унаследованную среду.
+Автономный UbuntuDriverEnvironmentProbe проверяет настоящие Selenium service/path
+и process builder с фиктивными driver/browser, без HTTP polling и реального Chrome.
+
 NavigationOnly задаёт binary явно; UiSmoke использует прежний BaseUiTest с системным
 Chrome. Перед каждым бизнес-методом отдельный listener сравнивает фактические
 browserVersion/chromedriverVersion с проверенными исполняемыми файлами. Несовпадение

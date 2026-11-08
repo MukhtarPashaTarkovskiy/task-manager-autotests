@@ -54,6 +54,7 @@ public class BaseUiTest {
         }
 
         driver = new ChromeDriver(options);
+        ru.tarkovskiy.ui.reporting.NavigationDiagnostics.attachSession(driver, headless);
         loginPage = new LoginPage(driver);
     }
 

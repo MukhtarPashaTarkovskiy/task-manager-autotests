@@ -36,7 +36,9 @@ public final class UiFailureDiagnostics {
                     + "matchingElements=" + (locator == null ? "[UNKNOWN_LOCATOR]"
                         : read(() -> Integer.toString(driver.findElements(locator).size()))) + "\n"
                     + "exceptionType=" + failure.getClass().getName() + "\n"
-                    + "exceptionMessage=" + safeMessage(failure) + "\n";
+                    + "exceptionMessage=" + safeMessage(failure) + "\n"
+                    + "networkError=" + NavigationDiagnostics.networkError(failure) + "\n"
+                    + read(() -> NavigationDiagnostics.environment(driver, "true".equalsIgnoreCase(System.getenv("HEADLESS")))) + "\n";
             report = redactConfiguredSecrets(report);
             // Identical sanitized content goes to Allure and the buffered/redacted CI console.
             System.out.println(report);
@@ -55,16 +57,7 @@ public final class UiFailureDiagnostics {
     }
 
     private static String safeUrl(String raw) {
-        if ("about:blank".equals(raw)) return "[ABOUT_BLANK]";
-        URI uri = URI.create(raw);
-        if (!"https".equals(uri.getScheme())
-                || !URI.create(UiConfig.BASE_URL).getHost().equals(uri.getHost())
-                || uri.getUserInfo() != null || (uri.getPort() != -1 && uri.getPort() != 443)
-                || uri.getRawPath() == null
-                || !uri.getRawPath().matches("/(?:login|register|tasks(?:/new|/[0-9]+/edit)?)?")) {
-            return "[UNAPPROVED_URL_OMITTED]";
-        }
-        return UiConfig.BASE_URL + uri.getRawPath();
+        return NavigationDiagnostics.safeUrl(raw);
     }
 
     private static String safeTitle(String title) {
@@ -94,7 +87,7 @@ public final class UiFailureDiagnostics {
         return "WebDriver command failed; non-allowlisted message omitted";
     }
 
-    private static String redactConfiguredSecrets(String text) {
+    static String redactConfiguredSecrets(String text) {
         for (String key : new String[]{"TEST_USER_PASSWORD", "TEST_DB_PASSWORD", "TEST_DB_USERNAME", "TEST_DB_URL", "TEST_ALLOWED_DB_HOST"}) {
             String value = System.getenv(key);
             if (value != null && !value.isEmpty()) {

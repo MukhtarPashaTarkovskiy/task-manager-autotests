@@ -1,0 +1,64 @@
+name: UI Ubuntu diagnostic
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Diagnostic mode (TEST only)
+        type: choice
+        required: true
+        default: NavigationOnly
+        options: [NavigationOnly, UiSmoke]
+
+permissions:
+  contents: read
+
+# Same literal group as tests.yml: never overlap the shared TEST environment.
+concurrency:
+  group: task-manager-test-environment
+  cancel-in-progress: false
+
+jobs:
+  diagnostic:
+    if: github.ref == 'refs/heads/develop'
+    runs-on: ubuntu-24.04
+    environment: test
+    timeout-minutes: 25
+    env:
+      TM_RUN_ID: ubuntu-${{ github.run_id }}-${{ github.run_attempt }}
+      TEST_BASE_URL: https://task-manager-test-588r.onrender.com
+      HEADLESS: 'true'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+      - name: Select compatible ChromeDriver for installed Google Chrome
+        run: python3 scripts/run-ui-ubuntu-diagnostic.py prepare-browser
+      - name: Install pinned Allure CLI
+        run: npm install --global allure-commandline@2.46.1
+      - name: Navigation only (no credentials, TestNG fixtures or DB)
+        if: inputs.mode == 'NavigationOnly'
+        run: python3 scripts/run-ui-ubuntu-diagnostic.py run --mode NavigationOnly
+      - name: Existing UI Smoke (four tests)
+        if: inputs.mode == 'UiSmoke'
+        env:
+          TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
+          TEST_DB_URL: ${{ secrets.TEST_DB_URL }}
+          TEST_DB_USERNAME: ${{ secrets.TEST_DB_USERNAME }}
+          TEST_DB_PASSWORD: ${{ secrets.TEST_DB_PASSWORD }}
+          TEST_ALLOWED_DB_HOST: ${{ secrets.TEST_ALLOWED_DB_HOST }}
+          TEST_ALLOWED_DB_PORT: ${{ vars.TEST_ALLOWED_DB_PORT }}
+        run: python3 scripts/run-ui-ubuntu-diagnostic.py run --mode UiSmoke
+      - name: Upload audited diagnostic results (also on test failure)
+        if: always() && hashFiles(format('test-runs/{0}/ubuntu-diagnostic/audited.marker', env.TM_RUN_ID)) != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-ubuntu-${{ inputs.mode }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: test-runs/${{ env.TM_RUN_ID }}/ubuntu-diagnostic/
+          if-no-files-found: error
+          retention-days: 14

@@ -1,7 +1,7 @@
 # Основной CI на Ubuntu 24.04
 
 Workflow `.github/workflows/tests-ubuntu.yml` называется **Task Manager Ubuntu test suites**.
-Тестовый job разрешён в `develop` и использует GitHub environment `test`, Java 17 и фиксированный URL TEST.
+Тестовый job использует Ubuntu 24.04, GitHub environment `test`, Java 17 и фиксированный URL TEST.
 
 ## Режимы
 
@@ -68,12 +68,19 @@ Launcher применяется ко всем Ubuntu UI-сессиям чере�
 TLS `require` или `verify-full`. Значения не передаются в аргументах процессов.
 
 Для ручного запуска выберите **Actions → Task Manager Ubuntu test suites → Run
-workflow**, ветку **develop** и один из режимов **Smoke**, **Regression**, **All**.
+workflow**, ветку **main** или **develop** и один из режимов **Smoke**, **Regression**, **All**.
 Ручной запуск доступен при любом значении repository variable `UBUNTU_CI_ENABLED`.
-Push в `develop` выбирает **All**, когда `UBUNTU_CI_ENABLED=true`. Если переменная
-отсутствует или сравнение с `true` в GitHub Actions ложно, job пропускается до входа
-в общую очередь TEST. Ветка `main` регистрирует workflow для ручного запуска.
-Токен workflow имеет только `contents: read`.
+
+- Push в `main` всегда выбирает **All**.
+- Push в `develop` выбирает **All** при `UBUNTU_CI_ENABLED=true`.
+- Pull request в `main` из ветки этого репозитория выбирает **Smoke**. Для PR из
+  форка задание с окружением `test` пропускается до передачи секретов и доступа к TEST-БД.
+- Push в `develop` с открытым PR в `main` создаёт два отдельных запуска. Push
+  проверяет ветку в режиме **All**, а PR проверяет результат пробного слияния в режиме **Smoke**.
+
+Токен workflow имеет только `contents: read`. Оба workflow в `main` используют общую
+группу `task-manager-test-environment` с `cancel-in-progress: false` и `queue: max`.
+Запуски по событиям `push` и `workflow_dispatch` используют YAML выбранной ветки.
 
 ## Результаты и Allure
 
@@ -183,7 +190,7 @@ Java probe запускает только синтетические TestNG fix
    **127/127 PASS** по четырём наборам, девять HTML-отчётов, вложения и историю.
    Сверить отсутствие Windows-запусков для этого SHA.
 7. Сверить фактический контекст Ubuntu job с required checks и проверить обе ветки.
-   Текущий workflow ограничен push в develop и ручным запуском. Привязка этого
+   На этапе миграции workflow был ограничен push в develop и ручным запуском. Привязка этого
    контекста как обязательного на PR или main требует отдельной проверки событий
    и правил. Зафиксировать SHA, run ID, статус переменной, rulesets и SHA отката.
 

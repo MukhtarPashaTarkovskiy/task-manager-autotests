@@ -17,6 +17,7 @@ permissions:
 concurrency:
   group: task-manager-test-environment
   cancel-in-progress: false
+  queue: max
 
 jobs:
   diagnostic:

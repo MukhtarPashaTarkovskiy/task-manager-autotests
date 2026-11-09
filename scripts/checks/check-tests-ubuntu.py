@@ -219,8 +219,9 @@ class Checks(unittest.TestCase):
 
     def test_yaml_serialized_dispatch_gate_and_exports(self):
         doc = yaml.load((ROOT / '.github/workflows/tests-ubuntu.yml').read_text(), Loader=yaml.BaseLoader)
-        self.assertEqual(set(doc['on']), {'workflow_dispatch', 'push'})
-        self.assertEqual(doc['on']['push']['branches'], ['develop'])
+        self.assertEqual(set(doc['on']), {'workflow_dispatch', 'push', 'pull_request'})
+        self.assertEqual(doc['on']['push']['branches'], ['main', 'develop'])
+        self.assertEqual(doc['on']['pull_request']['branches'], ['main'])
         self.assertEqual(doc['on']['workflow_dispatch']['inputs']['suite']['options'], ['Smoke', 'Regression', 'All'])
         self.assertNotIn('concurrency', doc)  # Disabled push must not disturb the shared TEST queue.
         self.assertEqual(doc['permissions'], {'contents': 'read'})
@@ -228,12 +229,19 @@ class Checks(unittest.TestCase):
         job = doc['jobs']['test']
         self.assertNotIn('needs', job)
         self.assertEqual(' '.join(job['if'].split()),
-            "github.ref == 'refs/heads/develop' && "
-            "(github.event_name == 'workflow_dispatch' || "
-            "(github.event_name == 'push' && vars.UBUNTU_CI_ENABLED == 'true'))")
+            "(github.event_name == 'push' && "
+            "(github.ref == 'refs/heads/main' || "
+            "(github.ref == 'refs/heads/develop' && vars.UBUNTU_CI_ENABLED == 'true'))) || "
+            "(github.event_name == 'workflow_dispatch' && "
+            "(github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')) || "
+            "(github.event_name == 'pull_request' && github.base_ref == 'main' && "
+            "github.event.pull_request.head.repo.fork == false && "
+            "github.event.pull_request.head.repo.full_name == github.repository)")
         self.assertEqual(job['env']['SUITE_SELECTION'],
-            "${{ github.event_name == 'workflow_dispatch' && inputs.suite || 'All' }}")
-        self.assertEqual(job['concurrency'], {'group': 'task-manager-test-environment', 'cancel-in-progress': 'false'})
+            "${{ github.event_name == 'workflow_dispatch' && inputs.suite || "
+            "github.event_name == 'pull_request' && 'Smoke' || 'All' }}")
+        self.assertEqual(job['concurrency'],
+            {'group': 'task-manager-test-environment', 'cancel-in-progress': 'false', 'queue': 'max'})
         self.assertEqual(job['runs-on'], 'ubuntu-24.04')
         self.assertEqual(job['environment'], 'test')
         self.assertNotIn('strategy', job)

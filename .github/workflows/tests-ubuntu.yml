@@ -10,7 +10,9 @@ on:
         default: Smoke
         options: [Smoke, Regression, All]
   push:
-    branches: [develop]
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: read
@@ -18,9 +20,14 @@ permissions:
 jobs:
   test:
     if: >-
-      github.ref == 'refs/heads/develop' &&
-      (github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'push' && vars.UBUNTU_CI_ENABLED == 'true'))
+      (github.event_name == 'push' &&
+      (github.ref == 'refs/heads/main' ||
+      (github.ref == 'refs/heads/develop' && vars.UBUNTU_CI_ENABLED == 'true'))) ||
+      (github.event_name == 'workflow_dispatch' &&
+      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')) ||
+      (github.event_name == 'pull_request' && github.base_ref == 'main' &&
+      github.event.pull_request.head.repo.fork == false &&
+      github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-24.04
     environment: test
     timeout-minutes: 90
@@ -28,11 +35,12 @@ jobs:
     concurrency:
       group: task-manager-test-environment
       cancel-in-progress: false
+      queue: max
     env:
       TM_RUN_ID: ubuntu-ci-${{ github.run_id }}-${{ github.run_attempt }}
       TEST_BASE_URL: https://task-manager-test-588r.onrender.com
       HEADLESS: 'true'
-      SUITE_SELECTION: ${{ github.event_name == 'workflow_dispatch' && inputs.suite || 'All' }}
+      SUITE_SELECTION: ${{ github.event_name == 'workflow_dispatch' && inputs.suite || github.event_name == 'pull_request' && 'Smoke' || 'All' }}
     steps:
       - uses: actions/checkout@v4
         with:

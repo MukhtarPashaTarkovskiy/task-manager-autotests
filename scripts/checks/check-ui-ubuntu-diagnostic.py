@@ -263,7 +263,8 @@ class OfflineChecks(unittest.TestCase):
         mode = doc['on']['workflow_dispatch']['inputs']['mode']
         self.assertEqual(mode['default'], 'NavigationOnly')
         self.assertEqual(mode['options'], ['NavigationOnly', 'UiSmoke'])
-        self.assertEqual(doc['concurrency'], {'group': 'task-manager-test-environment', 'cancel-in-progress': 'false'})
+        self.assertEqual(doc['concurrency'],
+                         {'group': 'task-manager-test-environment', 'cancel-in-progress': 'false', 'queue': 'max'})
         job = doc['jobs']['diagnostic']
         self.assertEqual(job['runs-on'], 'ubuntu-24.04')
         self.assertEqual(job['if'], "github.ref == 'refs/heads/develop'")

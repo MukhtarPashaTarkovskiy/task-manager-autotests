@@ -106,6 +106,8 @@ task-manager-autotests/
 | Regression | ApiRegression → UiRegression | 117 |
 | All | ApiSmoke → UiSmoke → ApiRegression → UiRegression | 127 |
 
+Автоматический All по push в `develop` прошёл **127/127**. Десять вариантов Smoke повторяются в Regression, поэтому уникальных вариантов — **117**. [Запуск 42570271886](https://github.com/MukhtarPashaTarkovskiy/task-manager-autotests/actions/runs/42570271886).
+
 В GitHub environment `test` хранятся secrets `TEST_USER_PASSWORD`, `TEST_DB_URL`, `TEST_DB_USERNAME`, `TEST_DB_PASSWORD`, `TEST_ALLOWED_DB_HOST` и variable `TEST_ALLOWED_DB_PORT`. Для доступа к общей TEST-БД основной workflow и ручной **UI Ubuntu diagnostic** используют одну группу concurrency.
 
 После запуска откройте **Actions → нужный запуск → Summary → Artifacts**. Архивы отдельных наборов содержат проверенные raw Allure results и вложения и хранятся 14 дней. Архив `ubuntu-allure-<selection>-<run>-<attempt>` содержит HTML, входные данные и общий `status.json` и хранится 90 дней. Чтобы сохранить результаты, скачайте и распакуйте ZIP до окончания срока хранения. Подробности об истории Allure, переключении CI и восстановлении Windows workflow приведены в [инструкции по Ubuntu CI](docs/ubuntu-ci.md).

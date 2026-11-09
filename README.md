@@ -98,7 +98,7 @@ task-manager-autotests/
 
 ## GitHub Actions на Ubuntu 24.04
 
-Основной workflow **Task Manager Ubuntu test suites** запускает API и UI последовательно в среде GitHub **test**. Push в `develop` выбирает **All**, если repository variable `UBUNTU_CI_ENABLED=true`. Для ручного запуска откройте **Actions → Task Manager Ubuntu test suites → Run workflow**, выберите ветку `develop` и набор.
+Основной workflow **Task Manager Ubuntu test suites** последовательно запускает API и UI в среде GitHub **test**. Push в main запускает All. Push в develop запускает All при UBUNTU_CI_ENABLED=true. Внутренний PR в main запускает Smoke на пробном слиянии. Для внешнего форка задание TEST пропускается до выдачи секретов и подключения к БД. Для ручного запуска выберите ветку `main` или `develop` и набор Smoke, Regression или All.
 
 | Набор | Порядок запуска | Выполнений |
 |---|---|---:|
@@ -106,7 +106,9 @@ task-manager-autotests/
 | Regression | ApiRegression → UiRegression | 117 |
 | All | ApiSmoke → UiSmoke → ApiRegression → UiRegression | 127 |
 
-Автоматический All по push в `develop` прошёл **127/127**. Десять вариантов Smoke повторяются в Regression, поэтому уникальных вариантов — **117**. [Запуск 42570271886](https://github.com/MukhtarPashaTarkovskiy/task-manager-autotests/actions/runs/42570271886).
+Автоматические All по push в [develop](https://github.com/MukhtarPashaTarkovskiy/task-manager-autotests/actions/runs/42570271886) и [main](https://github.com/MukhtarPashaTarkovskiy/task-manager-autotests/actions/runs/42644411463) завершились **127/127 PASS**. Десять вариантов Smoke входят в Regression, поэтому уникальных вариантов **117**.
+
+![Allure Combined-All — 127 Passed, 0 Failed, 0 Skipped, 100%](https://raw.githubusercontent.com/MukhtarPashaTarkovskiy/task-manager-autotests/main/docs/images/allure-overview-main-127-pass.png)
 
 В GitHub environment `test` хранятся secrets `TEST_USER_PASSWORD`, `TEST_DB_URL`, `TEST_DB_USERNAME`, `TEST_DB_PASSWORD`, `TEST_ALLOWED_DB_HOST` и variable `TEST_ALLOWED_DB_PORT`. Для доступа к общей TEST-БД основной workflow и ручной **UI Ubuntu diagnostic** используют одну группу concurrency.
 

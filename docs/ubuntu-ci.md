@@ -157,6 +157,8 @@ Java probe запускает только синтетические TestNG fix
 вариантов. Опубликованы четыре артефакта наборов и общий Allure. Шаг сохранения
 кеша истории завершился успешно. [Запуск 42570271886](https://github.com/MukhtarPashaTarkovskiy/task-manager-autotests/actions/runs/42570271886).
 
+Автоматический All по push в main, run 42644411463, commit 1725d919242da252b09f6ddad396e5fe6c80c115: 127 успешных выполнений, 0 ошибок и 0 пропусков, 117 уникальных вариантов. Опубликованы четыре артефакта наборов и общий Allure, шаг сохранения history успешен. https://github.com/MukhtarPashaTarkovskiy/task-manager-autotests/actions/runs/42644411463
+
 ## Исторический порядок переключения CI
 
 Каждый commit, push, запуск и изменение настроек выполняются после отдельного

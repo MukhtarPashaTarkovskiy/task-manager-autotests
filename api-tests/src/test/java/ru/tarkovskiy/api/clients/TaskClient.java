@@ -1,5 +1,7 @@
 package ru.tarkovskiy.api.clients;
 
+import io.qameta.allure.Step;
+import ru.tarkovskiy.api.reporting.SafeAllureHttpFilter;
 import io.restassured.filter.session.SessionFilter;
 import io.restassured.http.ContentType;
 import io.restassured.response.Response;
@@ -16,14 +18,17 @@ public class TaskClient {
         this.sessionFilter = sessionFilter;
     }
 
+    @Step("Получить CSRF без записи токена")
     public Response getCsrfToken() {
         return given()
                 .filter(sessionFilter)
+                .filter(new SafeAllureHttpFilter())
                 .baseUri(BASE_URL)
                 .when()
                 .get("/api/csrf");
     }
 
+    @Step("Создать задачу через API")
     public Response createTask(TaskRequest task) {
 
         Response csrfResponse = getCsrfToken();
@@ -33,6 +38,7 @@ public class TaskClient {
 
         return given()
                 .filter(sessionFilter)
+                .filter(new SafeAllureHttpFilter())
                 .baseUri(BASE_URL)
                 .redirects().follow(false)
                 .contentType(ContentType.JSON)
@@ -42,24 +48,29 @@ public class TaskClient {
                 .post("/api/tasks");
     }
 
+    @Step("Получить задачу по ID")
     public Response getTaskById(long taskId) {
         return given()
                 .filter(sessionFilter)
+                .filter(new SafeAllureHttpFilter())
                 .baseUri(BASE_URL)
                 .redirects().follow(false)
                 .when()
                 .get("/api/tasks/{id}", taskId);
     }
 
+    @Step("Получить список задач через API")
     public Response getAllTasks() {
         return given()
                 .filter(sessionFilter)
+                .filter(new SafeAllureHttpFilter())
                 .baseUri(BASE_URL)
                 .redirects().follow(false)
                 .when()
                 .get("/api/tasks");
     }
 
+    @Step("Изменить задачу через API")
     public Response updateTask(long taskId, TaskRequest task) {
 
         Response csrfResponse = getCsrfToken();
@@ -69,6 +80,7 @@ public class TaskClient {
 
         return given()
                 .filter(sessionFilter)
+                .filter(new SafeAllureHttpFilter())
                 .baseUri(BASE_URL)
                 .redirects().follow(false)
                 .contentType(ContentType.JSON)
@@ -78,6 +90,7 @@ public class TaskClient {
                 .put("/api/tasks/{id}", taskId);
     }
 
+    @Step("Подтвердить удаление задачи")
     public Response deleteTask(long taskId) {
 
         Response csrfResponse = getCsrfToken();
@@ -87,6 +100,7 @@ public class TaskClient {
 
         return given()
                 .filter(sessionFilter)
+                .filter(new SafeAllureHttpFilter())
                 .baseUri(BASE_URL)
                 .redirects().follow(false)
                 .header(headerName, token)

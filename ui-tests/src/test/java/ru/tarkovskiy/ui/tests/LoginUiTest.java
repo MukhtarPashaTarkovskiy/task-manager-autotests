@@ -1,18 +1,34 @@
 package ru.tarkovskiy.ui.tests;
 
+import io.qameta.allure.Allure;
+import io.qameta.allure.Description;
+import io.qameta.allure.Epic;
+import io.qameta.allure.Feature;
+import io.qameta.allure.Severity;
+import io.qameta.allure.SeverityLevel;
+import io.qameta.allure.Story;
+import io.qameta.allure.Step;
+
 import org.testng.annotations.Test;
 import ru.tarkovskiy.ui.base.BaseUiTest;
 import ru.tarkovskiy.ui.enums.LoginElement;
 import org.testng.annotations.DataProvider;
 import ru.tarkovskiy.ui.pages.LoginPage;
-import static org.testng.Assert.assertNotNull;
-import static org.testng.Assert.assertFalse;
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertTrue;
+import static ru.tarkovskiy.reporting.Checks.assertNotNull;
+import static ru.tarkovskiy.reporting.Checks.assertFalse;
+import static ru.tarkovskiy.reporting.Checks.assertEquals;
+import static ru.tarkovskiy.reporting.Checks.assertTrue;
+import ru.tarkovskiy.ui.utils.TestData;
 
 public class LoginUiTest extends BaseUiTest {
 
-    @Test
+    @Test(description = "UI: Открытие страницы входа")
+    @Epic("Task Manager")
+    @Feature("Авторизация")
+    @Story("Открытие страницы входа")
+    @Severity(SeverityLevel.NORMAL)
+    @Description("Открыть форму входа и проверить точный маршрут /login. Неверный переход должен фиксироваться как ошибка сценария.")
+    @Step("Открытие страницы входа")
     public void shouldOpenLoginPage() {
         loginPage.open(BASE_URL);
         assertEquals(
@@ -33,7 +49,13 @@ public class LoginUiTest extends BaseUiTest {
         };
     }
 
-    @Test(dataProvider = "loginElements")
+    @Test(dataProvider = "loginElements", description = "UI: Отображение элементов формы входа")
+    @Epic("Task Manager")
+    @Feature("Авторизация")
+    @Story("Отображение элементов формы входа")
+    @Severity(SeverityLevel.NORMAL)
+    @Description("Проверить видимость каждого элемента формы входа из DataProvider. В отчёте варианты отделены безопасным номером без значений учётных данных.")
+    @Step("Отображение элементов формы входа")
     public void shouldDisplayLoginElement(LoginElement element) {
 
         LoginPage loginPage = new LoginPage(driver);
@@ -45,38 +67,126 @@ public class LoginUiTest extends BaseUiTest {
         );
     }
 
-    @Test
+    @Test(description = "UI: Вход и переход к списку задач")
+    @Epic("Task Manager")
+    @Feature("Авторизация")
+    @Story("Вход и переход к списку задач")
+    @Severity(SeverityLevel.CRITICAL)
+    @Description("Войти постоянным тестовым пользователем и дождаться завершения авторизации. Ожидается точный переход на /tasks; итоговая структура страницы сохраняется с полным маскированием данных.")
+    @Step("Вход и переход к списку задач")
     public void shouldLoginSuccessfully() {
 
-        // 1. Получаем пароль из переменной окружения
-        String password = System.getenv("TEST_USER_PASSWORD");
-
-        assertNotNull(
-                password,
-                "Не задана переменная TEST_USER_PASSWORD"
-        );
-
-        assertFalse(
-                password.isBlank(),
-                "Пароль тестового пользователя пуст"
-        );
-
-        // 2. Открываем страницу входа
         LoginPage loginPage = new LoginPage(driver);
 
-        loginPage.open(BASE_URL);
+        Allure.step("Открыть форму входа и авторизоваться тестовым пользователем", () -> {
+            loginPage.open(BASE_URL)
+                    .login(
+                            TestData.EXISTING_USERNAME,
+                            TestData.getTestPassword()
+                    )
+                    .waitForSuccessfulLogin(BASE_URL);
+        });
 
-        // 3. Авторизуемся постоянным тестовым пользователем
-        loginPage.login("autotest_user", password);
+        Allure.step("Проверить переход на страницу задач", () -> {
+            assertEquals(
+                    loginPage.getCurrentUrl(),
+                    BASE_URL + "/tasks",
+                    "После авторизации не открылась страница задач"
+            );
+        });
+    }
 
-        // 4. Ожидаем переход на страницу задач
-        loginPage.waitForSuccessfulLogin(BASE_URL);
+    @DataProvider(name = "invalidCredentials")
+    public Object[][] invalidCredentials() {
+        return new Object[][]{
+                {
+                        TestData.EXISTING_USERNAME,
+                        TestData.INVALID_PASSWORD
+                },
+                {
+                        TestData.NON_EXISTING_USERNAME,
+                        TestData.INVALID_PASSWORD
+                },
+                {
+                        TestData.NON_EXISTING_USERNAME,
+                        TestData.getTestPassword()
+                }
+        };
+    }
 
-        // 5. Проверяем итоговый адрес
+    @Test(dataProvider = "invalidCredentials", description = "UI: Отклонение неверных учётных данных")
+    @Epic("Task Manager")
+    @Feature("Авторизация")
+    @Story("Отклонение неверных учётных данных")
+    @Severity(SeverityLevel.NORMAL)
+    @Description("Проверить варианты неверных учётных данных. Ожидаются маршрут /login?error и сообщение об ошибке авторизации; вход не должен состояться.")
+    @Step("Отклонение неверных учётных данных")
+    public void shouldRejectInvalidCredentials(
+            String username,
+            String password
+    ) {
+        LoginPage loginPage = new LoginPage(driver);
+
+        loginPage.open(BASE_URL)
+                .login(username, password)
+                .waitForLoginError(BASE_URL);
+
         assertEquals(
                 loginPage.getCurrentUrl(),
-                BASE_URL + "/tasks",
-                "После авторизации не открылась страница задач"
+                BASE_URL + "/login?error",
+                "При неверных учётных данных пользователь не должен войти"
+        );
+
+        assertEquals(
+                loginPage.getLoginErrorMessage(),
+                "Неверный логин или пароль",
+                "Отображается неверное сообщение об ошибке авторизации"
+        );
+    }
+
+    @DataProvider(name = "emptyCredentials")
+    public Object[][] emptyCredentials() {
+        return new Object[][]{
+                {"", TestData.getTestPassword()},
+                {TestData.EXISTING_USERNAME, ""},
+                {"", ""}
+        };
+    }
+
+    @Test(dataProvider = "emptyCredentials", description = "UI: Проверка обязательных полей входа")
+    @Epic("Task Manager")
+    @Feature("Авторизация")
+    @Story("Проверка обязательных полей входа")
+    @Severity(SeverityLevel.NORMAL)
+    @Description("Оставить пустым логин, пароль или оба поля. Браузер должен отметить обязательное поле через validity.valueMissing и сохранить маршрут /login.")
+    @Step("Проверка обязательных полей входа")
+    public void shouldRejectEmptyCredentials(
+            String username,
+            String password
+    ) {
+        LoginPage loginPage = new LoginPage(driver);
+
+        loginPage.open(BASE_URL)
+                .enterUsername(username)
+                .enterPassword(password)
+                .submit();
+
+        // Определяем, какое поле должно не пройти валидацию
+        LoginElement invalidElement =
+                username.isEmpty()
+                        ? LoginElement.USERNAME
+                        : LoginElement.PASSWORD;
+
+        assertTrue(
+                loginPage.isValueMissing(invalidElement),
+                "Браузер должен блокировать отправку формы из-за пустого поля: "
+                        + invalidElement
+        );
+
+        assertEquals(
+                loginPage.getCurrentUrl(),
+                BASE_URL + "/login",
+                "При пустых обязательных полях форма не должна отправляться"
         );
     }
 }

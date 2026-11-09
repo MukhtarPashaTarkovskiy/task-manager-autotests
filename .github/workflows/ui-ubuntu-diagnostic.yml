@@ -13,7 +13,7 @@ on:
 permissions:
   contents: read
 
-# Same literal group as tests.yml: never overlap the shared TEST environment.
+# Same group as the main Ubuntu workflow: never overlap the shared TEST environment.
 concurrency:
   group: task-manager-test-environment
   cancel-in-progress: false

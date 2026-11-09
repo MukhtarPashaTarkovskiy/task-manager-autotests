@@ -2,6 +2,8 @@
 package ru.tarkovskiy.api.clients;
 
 import io.restassured.http.ContentType;
+import io.qameta.allure.Step;
+import ru.tarkovskiy.api.reporting.SafeAllureHttpFilter;
 import io.restassured.response.Response;
 import ru.tarkovskiy.api.models.RegistrationRequest;
 import io.restassured.filter.session.SessionFilter;
@@ -21,6 +23,7 @@ public class AuthClient {
         this.sessionFilter = sessionFilter;
     }
 
+    @Step("Зарегистрировать пользователя")
     public Response register(RegistrationRequest request) {
 
         Response csrfResponse = getCsrfToken();
@@ -30,6 +33,7 @@ public class AuthClient {
 
         return given()
                 .filter(sessionFilter)
+                .filter(new SafeAllureHttpFilter())
                 .baseUri(BASE_URL)
                 .contentType(ContentType.JSON)
                 .header(headerName, token)
@@ -38,14 +42,17 @@ public class AuthClient {
                 .post("/api/auth/register");
     }
 
+    @Step("Получить CSRF без записи токена")
     public Response getCsrfToken() {
         return given()
                 .filter(sessionFilter)
+                .filter(new SafeAllureHttpFilter())
                 .baseUri(BASE_URL)
                 .when()
                 .get("/api/csrf");
     }
 
+    @Step("Войти пользователем")
     public Response login(String username, String password) {
 
         Response csrfResponse = getCsrfToken();
@@ -55,6 +62,7 @@ public class AuthClient {
 
         return given()
                 .filter(sessionFilter)
+                .filter(new SafeAllureHttpFilter())
                 .baseUri(BASE_URL)
                 .redirects().follow(false)
                 .contentType(ContentType.URLENC)
@@ -65,15 +73,18 @@ public class AuthClient {
                 .post("/login");
     }
 
+    @Step("Получить список задач")
     public Response getTasks() {
         return given()
                 .filter(sessionFilter)
+                .filter(new SafeAllureHttpFilter())
                 .baseUri(BASE_URL)
                 .redirects().follow(false)
                 .when()
                 .get("/api/tasks");
     }
 
+    @Step("Завершить сессию")
     public Response logout() {
 
         Response csrfResponse = getCsrfToken();
@@ -83,6 +94,7 @@ public class AuthClient {
 
         return given()
                 .filter(sessionFilter)
+                .filter(new SafeAllureHttpFilter())
                 .baseUri(BASE_URL)
                 .redirects().follow(false)
                 .header(headerName, token)

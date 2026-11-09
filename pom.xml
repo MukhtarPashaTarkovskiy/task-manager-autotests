@@ -17,12 +17,23 @@
 
     <properties>
         <maven.compiler.release>17</maven.compiler.release>
+        <maven.build.timestamp.format>yyyyMMdd-HHmmss-SSS</maven.build.timestamp.format>
+        <allure.latest.combined.input>${maven.multiModuleProjectDirectory}/test-runs/NO_COMPLETED_RUN</allure.latest.combined.input>
+        <allure.latest.combined.output>${maven.multiModuleProjectDirectory}/test-runs/NO_COMPLETED_RUN/view</allure.latest.combined.output>
+        <allure.latest.combined.runId>No completed combined run</allure.latest.combined.runId>
+        <allure.latest.combined.order>0</allure.latest.combined.order>
+        <allure.install.directory>${maven.multiModuleProjectDirectory}/.allure</allure.install.directory>
+        <allure.maven.input>${allure.latest.combined.input}</allure.maven.input>
+        <allure.maven.output>${allure.latest.combined.output}</allure.maven.output>
+        <allure.maven.buildOrder>${allure.latest.combined.order}</allure.maven.buildOrder>
+        <allure.maven.runId>${allure.latest.combined.runId}</allure.maven.runId>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
         <selenium.version>4.27.0</selenium.version>
         <rest-assured.version>5.5.0</rest-assured.version>
         <testng.version>7.10.2</testng.version>
         <allure.version>2.29.1</allure.version>
+        <aspectj.version>1.9.22.1</aspectj.version>
         <surefire.version>3.5.2</surefire.version>
         <compiler.version>3.13.0</compiler.version>
     </properties>
@@ -56,6 +67,75 @@
     </dependencyManagement>
 
     <build>
+        <plugins>
+            <!-- Standard goals are available at root and in both modules.
+                 Machine-local selection points to an atomically published working copy;
+                 original results and canonical HTML/history are never plugin inputs/outputs. -->
+            <plugin>
+                <groupId>io.qameta.allure</groupId><artifactId>allure-maven</artifactId><version>2.15.2</version>
+                <configuration>
+                    <installDirectory>${allure.install.directory}</installDirectory>
+                    <reportVersion>2.46.1</reportVersion>
+                    <!-- Allure builds HTML itself; omit the unrelated Maven Site skin wrapper. -->
+                    <outputFormat>xdoc</outputFormat>
+                    <resultsDirectory>${allure.maven.input}</resultsDirectory>
+                    <reportDirectory>${allure.maven.output}</reportDirectory>
+                    <executorInfo>
+                        <name>Task Manager TEST</name><type>maven</type>
+                        <buildName>${allure.maven.runId}</buildName><buildOrder>${allure.maven.buildOrder}</buildOrder>
+                    </executorInfo>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>3.1.0</version>
+                <inherited>false</inherited>
+                <executions><execution><id>reporting-agent</id><phase>validate</phase>
+                    <goals><goal>run</goal></goals><configuration><target>
+                        <mkdir dir="${project.build.directory}/reporting-agent-classes"/>
+                        <javac srcdir="${project.basedir}/reporting/agent"
+                               destdir="${project.build.directory}/reporting-agent-classes"
+                               includes="**/IsolatedRunAgent.java" release="17" encoding="UTF-8" includeantruntime="false"/>
+                        <java classname="ru.tarkovskiy.reporting.bootstrap.IsolatedRunAgent" fork="false" failonerror="true">
+                            <classpath path="${project.build.directory}/reporting-agent-classes"/>
+                            <arg value="${project.basedir}"/><arg value="${maven.build.timestamp}"/>
+                        </java>
+                        <jar destfile="${project.build.directory}/reporting-agent.jar"
+                             basedir="${project.build.directory}/reporting-agent-classes">
+                            <manifest><attribute name="Premain-Class" value="ru.tarkovskiy.reporting.bootstrap.IsolatedRunAgent"/></manifest>
+                        </jar>
+                    </target></configuration>
+                </execution></executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <!-- TestNG's default reporters serialize DataProvider arguments verbatim. -->
+                    <properties>
+                        <property>
+                            <name>usedefaultlisteners</name>
+                            <value>false</value>
+                        </property>
+                    </properties>
+                    <disableXmlReport>true</disableXmlReport>
+                    <useFile>false</useFile>
+                    <redirectTestOutputToFile>false</redirectTestOutputToFile>
+                    <argLine>-javaagent:"${maven.multiModuleProjectDirectory}/target/reporting-agent.jar"="${maven.multiModuleProjectDirectory},${project.artifactId},maven=${maven.build.timestamp}" -javaagent:"${settings.localRepository}/org/aspectj/aspectjweaver/${aspectj.version}/aspectjweaver-${aspectj.version}.jar"</argLine>
+                    <systemPropertyVariables>
+                        <tm.reporting.root>${maven.multiModuleProjectDirectory}</tm.reporting.root>
+                    </systemPropertyVariables>
+                </configuration>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.aspectj</groupId>
+                        <artifactId>aspectjweaver</artifactId>
+                        <version>${aspectj.version}</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
+        </plugins>
         <pluginManagement>
             <plugins>
                 <plugin>

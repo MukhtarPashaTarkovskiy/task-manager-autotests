@@ -1,35 +1,33 @@
 package ru.tarkovskiy.ui.pages;
 
 import org.openqa.selenium.By;
+import io.qameta.allure.Step;
 import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import ru.tarkovskiy.ui.base.BasePage;
+import ru.tarkovskiy.ui.config.UiConfig;
 import ru.tarkovskiy.ui.enums.LoginElement;
-
+import org.openqa.selenium.JavascriptExecutor;
 import static ru.tarkovskiy.ui.enums.LoginElement.*;
 
 public class LoginPage extends BasePage {
 
     private static final String LOGIN_URL = "/login";
     private final By usernameInput = By.id("username");
-
     private final By passwordInput = By.id("password");
-
-    private final By loginButton =
-            By.cssSelector("form.auth-form button[type='submit']");
-
-    private final By registrationLink =
-            By.cssSelector("a[href='/register']");
-
-    private final By pageTitle =
-            By.tagName("h1");
+    private final By loginButton = By.cssSelector("form.auth-form button[type='submit']");
+    private final By registrationLink = By.cssSelector("a[href='/register']");
+    private final By pageTitle = By.tagName("h1");
+    private final By loginErrorMessage = By.cssSelector("[role='alert'].alert-error");
 
     public LoginPage(WebDriver driver) {
         super(driver);
     }
 
+    @Step("Открыть страницу")
     public LoginPage open(String baseUrl) {
-        driver.get(baseUrl + LOGIN_URL);
+        navigate(baseUrl + LOGIN_URL);
         return this;
     }
 
@@ -49,32 +47,82 @@ public class LoginPage extends BasePage {
         return findVisible(locator).isDisplayed();
     }
 
+    @Step("Дождаться успешного входа")
     public LoginPage waitForSuccessfulLogin(String baseUrl) {
-        wait.until(
+        await(
                 ExpectedConditions.urlToBe(baseUrl + "/tasks")
         );
         return this;
     }
 
+    @Step("Заполнить логин")
     public LoginPage enterUsername(String username) {
         type(usernameInput, username);
         return this;
     }
 
+    @Step("Заполнить пароль без записи значения")
     public LoginPage enterPassword(String password) {
         type(passwordInput, password);
         return this;
     }
 
+    @Step("Отправить форму")
     public LoginPage submit() {
         click(loginButton);
         return this;
     }
 
+    @Step("Войти пользователем")
     public LoginPage login(String username, String password) {
         enterUsername(username);
         enterPassword(password);
         submit();
         return this;
+    }
+
+    @Step("Дождаться отклонения входа")
+    public LoginPage waitForLoginError(String baseUrl) {
+        await(
+                ExpectedConditions.urlToBe(baseUrl + "/login?error")
+        );
+        return this;
+    }
+
+    public String getLoginErrorMessage() {
+        return findVisible(loginErrorMessage).getText();
+    }
+
+    public boolean isValueMissing(LoginElement element) {
+
+        By locator = switch (element) {
+            case USERNAME -> usernameInput;
+            case PASSWORD -> passwordInput;
+            default -> throw new IllegalArgumentException(
+                    "Проверка обязательности не поддерживается: " + element
+            );
+        };
+
+        WebElement input = findVisible(locator);
+
+        JavascriptExecutor js = (JavascriptExecutor) driver;
+
+        return (Boolean) js.executeScript(
+                "return arguments[0].validity.valueMissing;",
+                input
+        );
+    }
+
+    @Step("Перейти к регистрации")
+    public RegistrationPage clickRegistrationLink() {
+        click(registrationLink);
+
+        await(
+                ExpectedConditions.urlToBe(
+                        UiConfig.BASE_URL + "/register"
+                )
+        );
+
+        return new RegistrationPage(driver);
     }
 }

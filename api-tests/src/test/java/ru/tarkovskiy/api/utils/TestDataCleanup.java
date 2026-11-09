@@ -2,7 +2,6 @@ package ru.tarkovskiy.api.utils;
 
 import ru.tarkovskiy.api.db.TaskDbHelper;
 import ru.tarkovskiy.api.db.UserDbHelper;
-
 import java.util.ArrayList;
 import java.util.List;
 

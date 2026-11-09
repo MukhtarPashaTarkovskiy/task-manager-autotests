@@ -1,17 +1,32 @@
 
 package ru.tarkovskiy.api.tests;
 
+import io.qameta.allure.Allure;
+import io.qameta.allure.Description;
+import io.qameta.allure.Epic;
+import io.qameta.allure.Feature;
+import io.qameta.allure.Severity;
+import io.qameta.allure.SeverityLevel;
+import io.qameta.allure.Story;
+import io.qameta.allure.Step;
+
 import org.testng.annotations.Test;
 import ru.tarkovskiy.api.db.DbConnection;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.Statement;
 
-import static org.testng.Assert.assertEquals;
+import static ru.tarkovskiy.reporting.Checks.assertEquals;
 
 public class DbConnectionTest {
 
-    @Test
+    @Test(description = "API: Подключение к тестовой базе данных")
+    @Epic("Task Manager")
+    @Feature("Инфраструктура")
+    @Story("Подключение к тестовой базе данных")
+    @Severity(SeverityLevel.NORMAL)
+    @Description("Проверить доступность разрешённой TEST PostgreSQL: запрос SELECT current_database() должен вернуть task_manager_test. Соединение закрывается автоматически; реквизиты подключения в отчёт не записываются.")
+    @Step("Подключение к тестовой базе данных")
     public void shouldConnectToTestDatabase() throws Exception {
 
         try (Connection connection = DbConnection.getConnection();

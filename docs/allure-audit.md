@@ -15,7 +15,7 @@
 В рабочем дереве до начала уже были десятки изменений. Список ниже относится к реализации Allure, а полный git diff включает и прежнюю работу пользователя.
 
 - pom.xml; api-tests/pom.xml; ui-tests/pom.xml.
-- .gitignore; README.md; .github/workflows/tests.yml.
+- .gitignore; README.md; прежний Windows workflow (исторический файл в Git на `8c98006`).
 - scripts/Invoke-TestMaven.ps1; scripts/Get-AllureReport.ps1.
 - scripts/checks/run-reporting-probes.py; scripts/checks/Test-ReportPipeline.ps1.
 - reporting/src/main/java/ru/tarkovskiy/reporting: RunAgent.java, ReportSafety.java, ReportingListener.java, Checks.java, ReportingProbe.java.

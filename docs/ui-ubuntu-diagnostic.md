@@ -3,9 +3,8 @@
 Workflow: `.github/workflows/ui-ubuntu-diagnostic.yml`, имя **UI Ubuntu diagnostic**.
 Единственный trigger — `workflow_dispatch`. Default — **NavigationOnly**.
 Job выполняется только для `refs/heads/develop` и использует environment `test`.
-Concurrency group `task-manager-test-environment` совпадает с Windows workflow:
+Concurrency group `task-manager-test-environment` совпадает с основным Ubuntu workflow:
 два workflow не используют TEST одновременно, активный запуск не отменяется.
-Существующие Windows CI, тесты, POM и диагностика не изменены.
 
 ## Режимы
 
@@ -116,29 +115,13 @@ Chrome, HTTP или JDBC. Сборка и фиктивные вложения ж
 Полный GitHub workflow, Maven dependency resolution на чистом runner и реальный Linux
 Chrome требуют отдельно согласованного запуска; автономные проверки их не заменяют.
 
-## Публикация и ручной запуск — только после согласования
+## Ручной запуск
 
-На момент проверки default branch репозитория — **main**, рабочая ветка — **develop**.
-Для регистрации кнопки Run workflow GitHub требует файл workflow в default branch.
-Одного push в develop недостаточно. Безопасный план публикации:
-
-1. Согласовать точный diff, включая ранее реализованные незакоммиченные файлы
-   NavigationDiagnostics, от которых зависит новый launcher. Не включать чужие изменения.
-2. Согласованный commit/push в develop выполнить с `[skip ci]` в сообщении публикуемых
-   коммитов: это пропускает push-trigger существующего Windows CI без изменения tests.yml.
-   Обычный push в develop автоматически выбирает All и запускает Windows CI.
-3. Отдельно согласовать добавление **только нового workflow-файла** в main для регистрации.
-   Не переносить автоматически весь develop. Для этого коммита также можно использовать
-   `[skip ci]`; существующий tests.yml в любом случае ограничивает push веткой develop.
-   Skip-маркеры не запрещают последующий workflow_dispatch. Required checks могут остаться
-   Pending; обход правил защиты веток не предполагается.
-4. После публикации открыть Actions → UI Ubuntu diagnostic → Run workflow.
-   В Branch выбрать develop, mode оставить NavigationOnly, затем Run workflow.
-5. Проверить логи и artifact. UiSmoke запускать отдельно после согласования. Выбор main
-   приведёт к skipped job из-за явного ограничения ref; это не проверка приложения.
-
-Никакие commit/push/merge/dispatch этой реализацией не выполняются.
+Workflow зарегистрирован в default branch **main**. После согласования запуска
+откройте **Actions → UI Ubuntu diagnostic → Run workflow**, выберите **develop**
+и режим **NavigationOnly**. Проверьте логи и artifact. **UiSmoke** запускайте
+отдельно после завершения текущих TEST jobs. Выбор **main** пропускает diagnostic
+job по условию ref.
 
 Официальные источники: [подбор ChromeDriver по build](https://developer.chrome.com/docs/chromedriver/downloads/version-selection),
-[требования ручного workflow_dispatch](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/manually-run-a-workflow),
-[правила skip ci](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/skip-workflow-runs).
+[требования ручного workflow_dispatch](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/manually-run-a-workflow).

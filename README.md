@@ -96,47 +96,37 @@ task-manager-autotests/
 
 При первом обращении Render может потребоваться дополнительное время на запуск приложения.
 
-## 🔐 Конфигурация и безопасность
+## GitHub Actions на Ubuntu 24.04
 
-Данные для подключения к тестовой БД и тестовые пароли передаются через переменные окружения:
+Основной workflow **Task Manager Ubuntu test suites** запускает API и UI последовательно в среде GitHub **test**. Push в `develop` выбирает **All**, если repository variable `UBUNTU_CI_ENABLED=true`. Для ручного запуска откройте **Actions → Task Manager Ubuntu test suites → Run workflow**, выберите ветку `develop` и набор.
 
-```text
-TEST_USER_PASSWORD
-TEST_DB_URL
-TEST_DB_USERNAME
-TEST_DB_PASSWORD
-```
+| Набор | Порядок запуска | Выполнений |
+|---|---|---:|
+| Smoke | ApiSmoke → UiSmoke | 10 |
+| Regression | ApiRegression → UiRegression | 117 |
+| All | ApiSmoke → UiSmoke → ApiRegression → UiRegression | 127 |
 
-Секреты не должны храниться в исходном коде или попадать в Git.
+В GitHub environment `test` хранятся secrets `TEST_USER_PASSWORD`, `TEST_DB_URL`, `TEST_DB_USERNAME`, `TEST_DB_PASSWORD`, `TEST_ALLOWED_DB_HOST` и variable `TEST_ALLOWED_DB_PORT`. Для доступа к общей TEST-БД основной workflow и ручной **UI Ubuntu diagnostic** используют одну группу concurrency.
 
-## 🚀 Запуск тестов
+После запуска откройте **Actions → нужный запуск → Summary → Artifacts**. Архивы отдельных наборов содержат проверенные raw Allure results и вложения и хранятся 14 дней. Архив `ubuntu-allure-<selection>-<run>-<attempt>` содержит HTML, входные данные и общий `status.json` и хранится 90 дней. Чтобы сохранить результаты, скачайте и распакуйте ZIP до окончания срока хранения. Подробности об истории Allure, переключении CI и восстановлении Windows workflow приведены в [инструкции по Ubuntu CI](docs/ubuntu-ci.md).
 
-Требования: **JDK 17**, **Maven**, доступ к тестовому окружению и необходимые переменные окружения.
+## Локальный запуск на Windows 11
 
-```bash
-git clone https://github.com/MukhtarPashaTarkovskiy/task-manager-autotests.git
-cd task-manager-autotests
-```
+Нужны JDK 17, Maven, Google Chrome и доступ к TEST. Для IntelliJ IDEA укажите JDK 17 и шесть TEST-переменных из списка выше в локальной конфигурации запуска. Передавайте их через среду или локальное хранилище DPAPI, без записи значений в Git.
 
-Запуск API-модуля:
+Из корня проекта в PowerShell:
 
-```bash
-mvn -pl api-tests test
-```
-
-Запуск всех модулей после завершения их настройки:
-
-```bash
+```powershell
 mvn test -fae
 ```
 
-## 📊 Результаты и дальнейшая работа
+Команда запускает стандартный поиск тестов Surefire. Локальная обёртка PowerShell также поддерживает общий запуск Surefire и отдельный выбор XML через параметр `-Suite`. Пример общего запуска с настроенным DPAPI:
 
-**API:** реализован набор автоматизированных проверок. Итоговое количество и результаты последнего запуска будут зафиксированы после публикации актуального кода.
+```powershell
+powershell -NoProfile -File scripts/Invoke-TestMaven.ps1 -All -Kind All -Headless
+```
 
-**UI:** модуль в разработке.
-
-**Следующие этапы:** завершение UI-сценариев, объединение тестовых наборов, настройка отчётности Allure и GitHub Actions CI.
+Настройки IntelliJ и Maven описаны в [инструкции локального запуска](docs/all-tests-local.md), настройка DPAPI и генерация Allure — в [инструкции по отчётности](docs/allure-reporting.md).
 
 ## 🎯 Цель проекта
 

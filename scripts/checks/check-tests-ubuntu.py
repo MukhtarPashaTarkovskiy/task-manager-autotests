@@ -223,13 +223,16 @@ class Checks(unittest.TestCase):
         self.assertEqual(doc['on']['push']['branches'], ['develop'])
         self.assertEqual(doc['on']['workflow_dispatch']['inputs']['suite']['options'], ['Smoke', 'Regression', 'All'])
         self.assertNotIn('concurrency', doc)  # Disabled push must not disturb the shared TEST queue.
-        gate = doc['jobs']['gate']
-        self.assertIn("vars.UBUNTU_CI_ENABLED == 'true'", gate['if'])
-        self.assertIn("github.ref == 'refs/heads/develop'", gate['if'])
-        js = gate['steps'][0]['with']['script']
-        self.assertIn("workflow_id: 'tests.yml'", js)
-        self.assertIn('disabled_manually', js)
+        self.assertEqual(doc['permissions'], {'contents': 'read'})
+        self.assertEqual(set(doc['jobs']), {'test'})
         job = doc['jobs']['test']
+        self.assertNotIn('needs', job)
+        self.assertEqual(' '.join(job['if'].split()),
+            "github.ref == 'refs/heads/develop' && "
+            "(github.event_name == 'workflow_dispatch' || "
+            "(github.event_name == 'push' && vars.UBUNTU_CI_ENABLED == 'true'))")
+        self.assertEqual(job['env']['SUITE_SELECTION'],
+            "${{ github.event_name == 'workflow_dispatch' && inputs.suite || 'All' }}")
         self.assertEqual(job['concurrency'], {'group': 'task-manager-test-environment', 'cancel-in-progress': 'false'})
         self.assertEqual(job['runs-on'], 'ubuntu-24.04')
         self.assertEqual(job['environment'], 'test')
@@ -240,9 +243,10 @@ class Checks(unittest.TestCase):
             if step.get('uses', '').startswith('actions/upload-artifact'):
                 self.assertIn('always()', step['if'])
                 self.assertIn('audited.marker', step['if'])
-        for other in ('tests.yml', 'ui-ubuntu-diagnostic.yml'):
-            other_doc = yaml.load((ROOT / '.github/workflows' / other).read_text(), Loader=yaml.BaseLoader)
-            self.assertEqual(other_doc['concurrency']['group'], job['concurrency']['group'])
+        diagnostic = yaml.load((ROOT / '.github/workflows/ui-ubuntu-diagnostic.yml').read_text(),
+            Loader=yaml.BaseLoader)
+        self.assertEqual(set(diagnostic['on']), {'workflow_dispatch'})
+        self.assertEqual(diagnostic['concurrency'], job['concurrency'])
 
 
 def compile_java(jdk):
